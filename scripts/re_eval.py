@@ -2,14 +2,16 @@ import argparse
 
 import lightning as L
 
-from fast_gnn_benchmark.trainer import get_device
+from fast_gnn_benchmark.trainer import get_device, get_global_config
 from fast_gnn_benchmark.wandb_utils import get_run_id_from_name, get_test_data_loader, load_model_from_wandb
 
 if __name__ == "__main__":
+    global_config = get_global_config()
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--run_name", type=str, required=True)
-    parser.add_argument("--entity", type=str, default="clement_wang")
-    parser.add_argument("--project", type=str, default="gnn_experiments")
+    parser.add_argument("--entity", type=str, default=global_config["wandb_logger_parameters"]["entity"])
+    parser.add_argument("--project", type=str, default=global_config["wandb_logger_parameters"]["project"])
     args = parser.parse_args()
 
     # data_parameters = {

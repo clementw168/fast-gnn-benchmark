@@ -5,9 +5,11 @@ from typing import Any
 import yaml
 
 import wandb
+from fast_gnn_benchmark.trainer import get_global_config
 
 
 def arg_parser() -> argparse.Namespace:
+    global_config = get_global_config()
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--config-file",
@@ -16,8 +18,8 @@ def arg_parser() -> argparse.Namespace:
         required=True,
         help="Path to the sweep config file. For example: configs/sweep/example.yml",
     )
-    parser.add_argument("--project", "-p", type=str, default="gnn_experiments")
-    parser.add_argument("--entity", "-e", type=str, default="clement_wang")
+    parser.add_argument("--project", "-p", type=str, default=global_config["wandb_logger_parameters"]["project"])
+    parser.add_argument("--entity", "-e", type=str, default=global_config["wandb_logger_parameters"]["entity"])
     return parser.parse_args()
 
 
