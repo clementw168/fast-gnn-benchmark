@@ -1,0 +1,47 @@
+command:
+  - uv
+  - run
+  - src/fast_gnn_benchmark/sweep/agent.py
+name: arxiv_sage_neighbour_sweep
+method: bayes # random, grid, bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+parameters:
+  base_config_file:
+    values:
+      - configs/ogbn_arxiv/sage_neighbour.yml
+  data_parameters:
+    parameters:
+      data_loader_parameters:
+        parameters:
+          num_neighbors:
+            values: 
+            - [5, 2]
+            - [10, 5]
+            - [25, 5]
+            - [25, 10]
+            - [50, 5]
+            - [50, 10]
+            - [100, 5]
+            - [20, 20, 10]
+            - [20, 10, 5, 5]
+          batch_size:
+            values: [128, 256, 512, 1024, 2048, 4096]
+  model_parameters:
+    parameters:
+      architecture_parameters:
+        parameters:
+          dropout:
+            values: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+
+      optimizer:
+        parameters:
+          parameters:
+            parameters:
+              lr: 
+                values: [0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
+              weight_decay: 
+                values: [0, 0.0001, 0.0005, 0.001, 0.005, 0.01]
+
+

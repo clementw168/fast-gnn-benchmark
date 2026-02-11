@@ -1,0 +1,38 @@
+command:
+  - uv
+  - run
+  - src/fast_gnn_benchmark/sweep/agent.py
+name: products_sage_ppr_sweep_2
+method: bayes # random, grid, bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+parameters:
+  base_config_file:
+    values:
+      - configs/sampling_experiments/products_sage_ppr_sampling.yml
+  data_parameters:
+    parameters:
+      train_data_loader_parameters:
+        parameters:
+          num_parts:
+            values: [20, 25, 30, 40, 50]
+          node_budget:
+            values: [400000, 500000, 600000, 700000, 800000]
+  model_parameters:
+    parameters:
+      architecture_parameters:
+        parameters:
+          dropout:
+            values: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+
+      optimizer:
+        parameters:
+          parameters:
+            parameters:
+              lr: 
+                values: [0.001, 0.0005, 0.0001, 0.00005, 0.00001]
+              weight_decay:
+                values: [0, 0.0001, 0.0005, 0.001, 0.005]
+
+

@@ -1,0 +1,80 @@
+[project]
+name = "fast-gnn-benchmark"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "gdown>=5.2.0",
+    "ipykernel>=6.30.1",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.6",
+    "networkx>=3.5",
+    "numpy>=2.3.2",
+    "ogb>=1.3.6",
+    "scikit-learn>=1.7.2",
+    "scipy>=1.16.1",
+    "setuptools>=80.9.0",
+    "torch==2.8.0",
+    "tqdm>=4.67.1",
+    "wandb>=0.21.3",
+    "lightning>=2.5.5",
+    "torch-geometric>=2.7.0",
+]
+
+[dependency-groups]
+dev = [
+    # Linting & formatting
+    "ruff==0.8.4",
+]
+
+[tool.uv]
+package = true
+
+[tool.ruff]
+line-length = 120
+
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "PIE",  # flake8-pie
+    "SIM",  # flake8-simplify
+    "RET",  # flake8-return
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "PL",   # pylint
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",    # line too long
+    "PLR0913", # too many arguments
+    "PLR0915", # too many statements
+    "PTH110",  # os-path-exists
+    "UP015",   # unnecessary open mode argument
+    "SIM118",  # do not use dict.keys()
+    "PTH108",  # use pathlib instead of os.unlink()
+    # TODO Get rid of those ignore by fixing them
+    "SIM108",  # use ternary operator instead of if-else-block
+    "B006",    # do not use mutable data structures for argument defaults
+    "PTH123",  # use pathlib.Path.open() instead of open()
+    "PTH107",  # use pathlib.Path.unlink() instead of os.remove()
+    "B007",    # loop control variable not used within loop body
+    "PLR0912", # too many branches
+    "PTH118",  # use pathlib with / operator instead of os.path.join()
+    "PTH120",  # use pathlib.Path.parent instead of os.path.dirname()
+    "PTH208",  # use pathlib.Path.iterdir() instead of os.listdir()
+    "SIM114",  # combine if branches using logical or operator
+    "C405",    # unnecessary list literal (rewrite as a set literal)
+    "RUF100",  # unused noqa directive
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["ARG", "S101", "PLR2004"]
+"*.ipynb" = ["ALL"]

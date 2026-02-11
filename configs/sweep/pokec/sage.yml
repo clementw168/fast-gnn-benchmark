@@ -1,0 +1,38 @@
+command:
+  - uv
+  - run
+  - src/fast_gnn_benchmark/sweep/agent.py
+name: pokec_sage_parts_sweep
+method: bayes # random, grid, bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+parameters:
+  base_config_file:
+    values:
+      - configs/pokec/sage.yml
+  model_parameters:
+    parameters:
+      architecture_parameters:
+        parameters:
+          num_layers:
+            values: [4, 5, 6, 7, 8, 9, 10]
+          dropout:
+            values: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+          hidden_dim:
+            values: [64, 128, 256, 512]
+          use_residual:
+            values: [true, false]
+          use_batch_norm:
+            values: [true, false]
+
+      optimizer:
+        parameters:
+          parameters:
+            parameters:
+              lr: 
+                values: [0.005, 0.001, 0.0005, 0.0001, 0.00005, 0.00001]
+              weight_decay: 
+                values: [0, 0.00001, 0.00005, 0.0001, 0.0005, 0.001, 0.005]
+
+

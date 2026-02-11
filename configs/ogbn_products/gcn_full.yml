@@ -1,0 +1,96 @@
+
+
+parameters:
+  num_classes: &num_classes 47
+  input_dim: &input_dim 100
+
+
+seed: 42
+group_id: null
+n_runs: 1
+
+data_parameters:
+  dataset_type: ogbn-products
+  batch_size: 1
+  # transforms: 
+  #   - "normalize_features"
+  add_self_loops_and_remove_duplicate_edges: false
+  remove_duplicate_edges: false
+  train_data_loader_parameters:
+    data_loader_type: optimized_random_node_loader
+    num_parts: 1
+    pin_memory: false
+    on_device: true
+  val_data_loader_parameters:
+    data_loader_type: optimized_random_node_loader
+    num_parts: 1
+    pin_memory: false
+    on_device: true
+  test_data_loader_parameters:
+    data_loader_type: optimized_random_node_loader
+    num_parts: 1
+    pin_memory: false
+    on_device: true
+
+model_parameters:
+  task_type: node_classification
+  architecture_parameters:
+      architecture_type: gcn
+      input_dim: *input_dim
+      hidden_dim: 200
+      output_dim: *num_classes
+      num_layers: 4
+      dropout: 0.5
+      use_input_projection: false
+      use_output_projection: false
+      use_residual: true
+      use_layer_norm: true
+      conv_parameters:
+        add_self_loops: false
+  loss:
+      loss_type: cross_entropy
+      parameters:
+        reduction: none
+  metrics:
+    - metric_type: optimized_accuracy
+      display_name: accuracy
+    - metric_type: optimized_f1
+      display_name: f1
+    - metric_type: optimized_precision
+      display_name: precision
+    - metric_type: optimized_recall
+      display_name: recall
+  optimizer:
+    optimizer_type: adam
+    parameters:
+      lr: 0.003
+      weight_decay: 0.001
+
+callbacks: 
+    # - callback_type: early_stopping
+    #   parameters:
+    #     monitor: val/accuracy
+    #     patience: 20
+    #     mode: "max"
+    - callback_type: model_checkpoint
+      parameters:
+        monitor: val/accuracy
+        mode: max
+        save_top_k: 1
+        filename: best
+
+wandb_logger_parameters:
+  entity: clement_wang
+  project: gnn_experiments
+  reinit: true
+
+compilation_parameters:
+  use_compiled_torch: false
+  full_graph: false
+
+trainer_config:
+  max_epochs: 200
+  log_every_n_steps: 1
+  # precision: bf16-mixed
+  # profiler: simple
+

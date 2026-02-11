@@ -1,0 +1,99 @@
+parameters:
+  num_classes: &num_classes 172
+  input_dim: &input_dim 128
+
+
+seed: 42
+group_id: null
+n_runs: 1
+
+data_parameters:
+  dataset_type: ogbn-papers100M-on-ram
+  # transforms: 
+  #   - "normalize_features"
+  to_undirected: false
+  add_self_loops_and_remove_duplicate_edges: false
+  remove_duplicate_edges: false
+  train_data_loader_parameters:
+    data_loader_type: optimized_random_node_loader
+    num_parts: 60
+    pin_memory: false
+    on_device: false
+  val_data_loader_parameters:
+    data_loader_type: optimized_random_node_loader
+    num_parts: 14
+    pin_memory: false
+    on_device: false
+  test_data_loader_parameters:
+    data_loader_type: optimized_random_node_loader
+    num_parts: 14
+    pin_memory: false
+    on_device: false
+
+
+
+model_parameters:
+  task_type: node_classification
+  architecture_parameters:
+      architecture_type: sage
+      input_dim: *input_dim
+      hidden_dim: 256
+      output_dim: *num_classes
+      num_layers: 5
+      dropout: 0.5
+      use_input_projection: false
+      use_output_projection: false
+      use_residual: false
+      use_layer_norm: true
+      use_batch_norm: false
+      
+  loss:
+      loss_type: cross_entropy
+      parameters:
+        reduction: none
+        ignore_index: -1
+
+  metrics:
+    - metric_type: optimized_accuracy
+      display_name: accuracy
+    - metric_type: optimized_f1
+      display_name: f1
+    - metric_type: optimized_precision
+      display_name: precision
+    - metric_type: optimized_recall
+      display_name: recall
+
+  optimizer:
+    optimizer_type: adam
+    parameters:
+      lr: 0.001
+      weight_decay: 0
+
+callbacks: 
+    - callback_type: early_stopping
+      parameters:
+        monitor: val/loss
+        patience: 50
+        mode: min
+    - callback_type: model_checkpoint
+      parameters:
+        monitor: val/loss
+        mode: min
+        save_top_k: 1
+        filename: best
+
+wandb_logger_parameters:
+  entity: clement_wang
+  project: gnn_experiments
+  reinit: true
+
+compilation_parameters:
+  use_compiled_torch: false
+  full_graph: false
+
+trainer_config:
+  max_epochs: 20
+  log_every_n_steps: 1
+  # precision: bf16-mixed
+  # profiler: simple
+

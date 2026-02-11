@@ -1,0 +1,41 @@
+command:
+  - uv
+  - run
+  - src/fast_gnn_benchmark/sweep/agent.py
+name: products_gcn_sweep
+method: bayes # random, grid, bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+parameters:
+  base_config_file:
+    values:
+      - configs/ogbn_products/gcn.yml
+  model_parameters:
+    parameters:
+      architecture_parameters:
+        parameters:
+          hidden_dim:
+            values: [64, 128, 256, 512]
+          num_layers: 
+            values: [2, 3, 4]
+          dropout:
+            values: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+          use_input_projection:
+            values: [true, false]
+          use_output_projection:
+            values: [true, false]
+          use_residual:
+            values: [true, false]
+          use_layer_norm:
+            values: [true, false]
+      optimizer:
+        parameters:
+          parameters:
+            parameters:
+              lr: 
+                values: [0.05, 0.01, 0.005, 0.001, 0.0005, 0.0001]
+              weight_decay: 
+                values: [0, 0.0001, 0.0005, 0.001, 0.005, 0.01]
+
+
