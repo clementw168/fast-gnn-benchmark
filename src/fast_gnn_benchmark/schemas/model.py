@@ -356,8 +356,6 @@ class CompilationParameters(BaseModel):
 
 class TrainerParameters(BaseModel):
     seed: int | None = None
-    group_id: str | None = None
-    n_runs: int = 1
     data_parameters: DataParameters
     model_parameters: Annotated[
         NodeClassificationModelParameters | LinkPredictionModelParameters,

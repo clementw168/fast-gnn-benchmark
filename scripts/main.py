@@ -1,8 +1,6 @@
 from pprint import pprint
 from typing import Any
 
-import numpy as np
-
 from fast_gnn_benchmark.trainer import do_run, fix_seed, get_trainer_parameters_from_config
 
 
@@ -17,27 +15,12 @@ def main(file_path: str, override_dict: dict[str, Any] = {}) -> None:
     else:
         print("No seed provided")
 
-    test_metrics = []
+    test_metrics = do_run(trainer_parameters)
 
-    for run in range(trainer_parameters.n_runs):
-        print(f"Run {run + 1} of {trainer_parameters.n_runs}")
-
-        test_metrics.append(do_run(trainer_parameters))
-
-    if not test_metrics:
-        raise ValueError("No run was done")
-
-    for data_loader_idx in range(len(test_metrics[0])):
-        data_loader_metrics = {}
-        for metric in test_metrics[0][data_loader_idx]:
-            metric_values = [test_metrics[run][data_loader_idx][metric] for run in range(len(test_metrics))]
-
-            data_loader_metrics[metric] = metric_values
-
+    for data_loader_idx in range(len(test_metrics)):
         print(f"Results for data loader {data_loader_idx}:")
-        for metric, values in data_loader_metrics.items():
-            mean, std = np.mean(values), np.std(values)
-            print(f"{metric} : {mean:.4f} ± {std:.4f}")
+        pprint(test_metrics[data_loader_idx])
+        print()
 
 
 if __name__ == "__main__":

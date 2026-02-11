@@ -59,6 +59,11 @@ def override_nested_dict(nested_dict: dict[str, Any], override_dict: dict[str, A
     return nested_dict
 
 
+def get_global_config() -> dict[str, Any]:
+    with open("global_config.yml", "r") as file:
+        return yaml.safe_load(file)
+
+
 def get_trainer_parameters_from_config(
     config_file: str, override_dict: dict | None = None, import_global_config: bool = True
 ) -> TrainerParameters:
@@ -66,10 +71,7 @@ def get_trainer_parameters_from_config(
         config = yaml.safe_load(file)
 
     if import_global_config:
-        with open("global_config.yml", "r") as file:
-            global_config = yaml.safe_load(file)
-
-        config = override_nested_dict(config, global_config)
+        config = override_nested_dict(config, get_global_config())
 
     if override_dict is not None:
         config = override_nested_dict(config, override_dict)
@@ -160,13 +162,6 @@ def get_device() -> str:
     return "cpu"
 
 
-def set_group_id_from_wandb(trainer_parameters: TrainerParameters, wandb_logger: WandbLogger) -> None:
-    if trainer_parameters.group_id is not None:
-        return
-
-    trainer_parameters.group_id = wandb_logger.experiment.name
-
-
 def get_wandb_logger(trainer_parameters: TrainerParameters) -> WandbLogger | None:
     if trainer_parameters.wandb_logger_parameters is None:
         return None
@@ -176,9 +171,6 @@ def get_wandb_logger(trainer_parameters: TrainerParameters) -> WandbLogger | Non
         trainer_parameters.wandb_logger_parameters.id = None
 
     wandb_logger = trainer_parameters.wandb_logger_parameters.get()
-
-    # Set group id from wandb
-    set_group_id_from_wandb(trainer_parameters, wandb_logger)
 
     # Upload the full config to wandb
     wandb_logger.experiment.config.update(trainer_parameters.model_dump())
@@ -232,9 +224,6 @@ def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
     model = get_model(trainer_parameters)
 
     callbacks = get_callbacks(trainer_parameters)
-
-    if trainer_parameters.group_id is None:
-        trainer_parameters.group_id = str(uuid.uuid4())
 
     check_test_batch(model, test_loader, device)
 

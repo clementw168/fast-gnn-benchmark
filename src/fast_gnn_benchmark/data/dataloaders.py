@@ -1,8 +1,7 @@
 import os
-from math import ceil
 from collections.abc import Callable, Iterator
+from math import ceil
 from typing import Any
-
 
 import numpy as np
 import pandas as pd
@@ -34,7 +33,7 @@ class SingleGraphDataset(InMemoryDataset):
         self._data_obj = data
         super().__init__(".", transform, pre_transform)
 
-        # Collate into PyG’s internal storage format
+        # Collate into PyG's internal storage format
         data_list: list[Data] = [self._data_obj]
         self.data, self.slices = self.collate(data_list)
 
@@ -73,7 +72,7 @@ def inductive_subgraph(data: Data, split_type: SplitType) -> Data:
 
     subgraph_edges, _ = subgraph(nodes_to_keep, data.edge_index, relabel_nodes=True)  # type: ignore
 
-    new_data = Data(
+    return Data(
         x=data.x[nodes_to_keep],  # type: ignore
         edge_index=subgraph_edges,
         y=data.y[nodes_to_keep],  # type: ignore
@@ -81,17 +80,16 @@ def inductive_subgraph(data: Data, split_type: SplitType) -> Data:
         val_mask=data.val_mask[nodes_to_keep],
         test_mask=data.test_mask[nodes_to_keep],
     )
-    return new_data
 
 
-""" 
+"""
 All data loaders should return a Data object with the following attributes:
 - x: Tensor[float, (num_nodes, num_features)]
 - edge_index: Tensor[int, (2, num_edges)]
 - y: Tensor[int, (num_nodes,)]
 - compute_mask: Tensor[bool, (num_nodes,)]  (boolean tensor of shape [num_nodes] indicating which nodes should be used for computing the loss)
 
-This is mandatory to be compatible with the step functions. 
+This is mandatory to be compatible with the step functions.
 """
 
 
@@ -876,15 +874,15 @@ class OnDiskMemmapsRandomNodeLoader:
 
             self.features_blocks_mm = [
                 np.memmap(file, mode="r", dtype=np.float32, shape=(count, self.dataset.dim_features))
-                for file, count in zip(self.features_blocks_files, self.features_blocks_counts)
+                for file, count in zip(self.features_blocks_files, self.features_blocks_counts, strict=True)
             ]
             self.edges_blocks_src_mm = [
                 np.memmap(file, mode="r", dtype=np.int64, shape=(count,))
-                for file, count in zip(self.edges_src_blocks_files, self.edges_block_counts)
+                for file, count in zip(self.edges_src_blocks_files, self.edges_block_counts, strict=True)
             ]
             self.edges_blocks_dst_mm = [
                 np.memmap(file, mode="r", dtype=np.int64, shape=(count,))
-                for file, count in zip(self.edges_dst_blocks_files, self.edges_block_counts)
+                for file, count in zip(self.edges_dst_blocks_files, self.edges_block_counts, strict=True)
             ]
         else:
             self.features_mm = np.memmap(
@@ -912,8 +910,6 @@ class OnDiskMemmapsRandomNodeLoader:
         block_end = block_start + self.block_size
         local_idx = batch_idx[(batch_idx >= block_start) & (batch_idx < block_end)] - block_start
         return self.features_blocks_mm[block_idx][local_idx]
-
-        return sub_features
 
     def get_features_blocks(self, batch_idx: np.ndarray, node_mask: np.ndarray) -> np.ndarray:  # noqa: ARG002
         block_ids = np.unique(batch_idx // self.block_size)

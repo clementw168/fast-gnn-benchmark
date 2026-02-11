@@ -6,8 +6,6 @@ parameters:
 
 
 seed: 42
-group_id: null
-n_runs: 5
 
 data_parameters:
   dataset_type: ogbn-products

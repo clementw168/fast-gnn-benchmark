@@ -4,8 +4,6 @@ parameters:
 
 
 seed: 42
-group_id: null
-n_runs: 1
 
 data_parameters:
   dataset_type: ogbn-arxiv
