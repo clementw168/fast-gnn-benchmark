@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import torch
@@ -46,7 +46,7 @@ class OGBNDataset:
         if transform:
             x = transform(x)
 
-        data = Data(
+        return Data(
             x=x,
             edge_index=torch.from_numpy(graph["edge_index"]),
             y=torch.from_numpy(labels).squeeze(),
@@ -54,8 +54,6 @@ class OGBNDataset:
             val_mask=torch.from_numpy(val_mask),
             test_mask=torch.from_numpy(test_mask),
         )
-
-        return data
 
     def __len__(self):
         return 1

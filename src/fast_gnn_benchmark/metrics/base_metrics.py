@@ -11,7 +11,7 @@ class BinaryDistribution(torchmetrics.Metric):
         self.add_state("prediction_class", default=torch.tensor(0), dist_reduce_fx="sum")
         self.add_state("total_samples", default=torch.tensor(0), dist_reduce_fx="sum")
 
-    def update(self, pred: torch.Tensor, target: torch.Tensor) -> None:
+    def update(self, pred: torch.Tensor, target: torch.Tensor) -> None:  # noqa: ARG002
         with torch.no_grad():
             self.prediction_class += (pred > 0).sum()
             self.total_samples += pred.shape[0]

@@ -87,7 +87,7 @@ class FullAttentionConv(torch.nn.Module):
         else:
             self.value_projection = None
 
-    def forward(self, x, edge_index, compute_attention: bool = False):
+    def forward(self, x, edge_index, compute_attention: bool = False):  # noqa: ARG002
         # [N, M] -> [N, H, M]
         query = self.query_projection(x).reshape(-1, self.heads, self.head_dim)
         key = self.key_projection(x).reshape(-1, self.heads, self.head_dim)
@@ -216,6 +216,4 @@ class SGFormer(torch.nn.Module):
         else:
             x = transformer_output
 
-        x = self.output_projection(x)
-
-        return x
+        return self.output_projection(x)

@@ -1,6 +1,8 @@
 import os
 from math import ceil
-from typing import Any, Callable, Iterator
+from collections.abc import Callable, Iterator
+from typing import Any
+
 
 import numpy as np
 import pandas as pd
@@ -909,11 +911,11 @@ class OnDiskMemmapsRandomNodeLoader:
         block_start = block_idx * self.block_size
         block_end = block_start + self.block_size
         local_idx = batch_idx[(batch_idx >= block_start) & (batch_idx < block_end)] - block_start
-        sub_features = self.features_blocks_mm[block_idx][local_idx]
+        return self.features_blocks_mm[block_idx][local_idx]
 
         return sub_features
 
-    def get_features_blocks(self, batch_idx: np.ndarray, node_mask: np.ndarray) -> np.ndarray:
+    def get_features_blocks(self, batch_idx: np.ndarray, node_mask: np.ndarray) -> np.ndarray:  # noqa: ARG002
         block_ids = np.unique(batch_idx // self.block_size)
 
         accumulator = Parallel(n_jobs=self.num_workers)(
@@ -947,7 +949,7 @@ class OnDiskMemmapsRandomNodeLoader:
 
         results = Parallel(n_jobs=self.num_workers)(delayed(self.process_edge_block)(b, node_mask) for b in block_ids)
 
-        edges_src, edges_dst = map(np.concatenate, zip(*results))
+        edges_src, edges_dst = map(np.concatenate, zip(*results, strict=True))
 
         return edges_src, edges_dst
 
@@ -992,8 +994,8 @@ class OnDiskMemmapsRandomNodeLoader:
                 edge_index=torch.from_numpy(np.stack([edges_src, edges_dst], axis=0)),
                 y=torch.from_numpy(labels),
                 train_mask=torch.from_numpy(split_mask == 1),
-                val_mask=torch.from_numpy(split_mask == 2),
-                test_mask=torch.from_numpy(split_mask == 3),
+                val_mask=torch.from_numpy(split_mask == 2),  # noqa: PLR2004
+                test_mask=torch.from_numpy(split_mask == 3),  # noqa: PLR2004
             )
 
             subgraph = add_compute_mask(subgraph, self.split_type)

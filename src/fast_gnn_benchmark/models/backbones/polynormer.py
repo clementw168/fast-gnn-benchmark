@@ -107,7 +107,7 @@ class PolyNormerGlobalStack(torch.nn.Module):
             self.lns.append(torch.nn.LayerNorm(num_heads * hidden_dim))
         self.lin_out = torch.nn.Linear(num_heads * hidden_dim, num_heads * hidden_dim)
 
-    def forward(self, x, edge_index):
+    def forward(self, x, edge_index) -> torch.Tensor:  # noqa: ARG002
         seq_len, _ = x.size()
         for i in range(self.num_layers):
             h = self.h_lins[i](x)
@@ -170,7 +170,7 @@ class PolyNormer(torch.nn.Module):
             architecture_parameters.hidden_dim * architecture_parameters.num_heads, architecture_parameters.output_dim
         )
 
-    def forward(self, x, edge_index):
+    def forward(self, x, edge_index) -> torch.Tensor:  # noqa: ARG002
         x = F.dropout(x, p=self.architecture_parameters.in_dropout, training=self.training)
 
         x = self.input_projection(x)
@@ -180,6 +180,4 @@ class PolyNormer(torch.nn.Module):
 
         x = self.global_stack(x, edge_index)
 
-        x = self.output_projection(x)
-
-        return x
+        return self.output_projection(x)

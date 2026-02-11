@@ -24,7 +24,7 @@ class GCNII(torch.nn.Module):
 
         self.output_projection = torch.nn.Linear(architecture_parameters.hidden_dim, architecture_parameters.output_dim)
 
-    def forward(self, x, edge_index):
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         x_init = self.input_projection(x)
         x_init = F.relu(x_init)
         x_init = F.dropout(x_init, self.architecture_parameters.dropout, training=self.training)
@@ -36,6 +36,4 @@ class GCNII(torch.nn.Module):
             x = F.relu(x)
             x = F.dropout(x, self.architecture_parameters.dropout, training=self.training)
 
-        x = self.output_projection(x)
-
-        return x
+        return self.output_projection(x)

@@ -144,6 +144,4 @@ def to_undirected(edges: torch.Tensor) -> torch.Tensor:
     """
     Convert the edge index tensor to an undirected graph.
     """
-    edges = torch.cat([edges, edges.flip(0)], dim=1)
-
-    return edges
+    return torch.cat([edges, edges.flip(0)], dim=1)

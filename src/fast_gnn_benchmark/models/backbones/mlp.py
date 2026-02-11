@@ -30,7 +30,7 @@ class MLP(torch.nn.Module):
             if architecture_parameters.use_layer_norm:
                 self.layer_norms.append(torch.nn.LayerNorm(output_dim))
 
-    def forward(self, x, edge_index):
+    def forward(self, x, edge_index) -> torch.Tensor:  # noqa: ARG002
         for layer_index in range(self.architecture_parameters.num_layers):
             projected_x = self.projection_layers[layer_index](x)
 

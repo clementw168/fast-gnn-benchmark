@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from enum import Enum
-from typing import Annotated, Callable, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 from torch_geometric.transforms import NormalizeFeatures, ToUndirected

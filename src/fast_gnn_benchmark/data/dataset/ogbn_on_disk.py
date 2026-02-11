@@ -1,6 +1,6 @@
 import os
 import shutil
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -20,18 +20,18 @@ def download_dataset_if_not_exists(root, name, original_root, download_link):
     if all(os.path.exists(path) for path in paths):
         print(f"Dataset {name} already downloaded at {root}")
         return
-    else:
-        print(f"Dataset {name} not found at {root}, downloading...")
-        path = download_url(download_link, original_root)
-        extract_zip(path, original_root)
-        os.unlink(path)
 
-        extracted_folder = os.path.join(original_root, os.listdir(original_root)[0])
+    print(f"Dataset {name} not found at {root}, downloading...")
+    path = download_url(download_link, original_root)
+    extract_zip(path, original_root)
+    os.unlink(path)
 
-        for file in os.listdir(extracted_folder):
-            shutil.move(os.path.join(extracted_folder, file), original_root)
+    extracted_folder = os.path.join(original_root, os.listdir(original_root)[0])
 
-        os.remove(extracted_folder)
+    for file in os.listdir(extracted_folder):
+        shutil.move(os.path.join(extracted_folder, file), original_root)
+
+    os.remove(extracted_folder)
 
 
 class OGBNDatasetOnDisk:

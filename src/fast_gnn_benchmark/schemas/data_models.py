@@ -190,7 +190,7 @@ class DataParameters(BaseModel):
 
         return dataset
 
-    def get_data_loader(
+    def get_data_loader(  # noqa: PLR0911
         self, dataset: DatasetTypeChoices, split_type: SplitType, data_loader_parameters: DataLoaderParametersChoices
     ) -> DataLoaderTypeChoices:
         match data_loader_parameters.data_loader_type:

@@ -1,5 +1,6 @@
+from collections.abc import Iterable
 from enum import Enum
-from typing import Annotated, Any, Iterable, Literal
+from typing import Annotated, Any, Literal
 
 import lightning as L
 import torch
@@ -16,7 +17,6 @@ from fast_gnn_benchmark.metrics.base_metrics import (
     OptimizedPrecision,
     OptimizedRecall,
 )
-from fast_gnn_benchmark.metrics.implicit_gradient_correction import ImplicitGradientCorrectionCallback
 from fast_gnn_benchmark.schemas.data_models import DataParameters
 
 # -------------------- Loss --------------------
@@ -31,9 +31,9 @@ class LossParameters(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
     def get(self) -> torch.nn.Module:
-        assert "reduction" in self.parameters and self.parameters["reduction"] == "none", (
-            "Current implementation only supports reduction=none"
-        )
+        assert (
+            "reduction" in self.parameters and self.parameters["reduction"] == "none"
+        ), "Current implementation only supports reduction=none"
         match self.loss_type:
             case LossType.CROSS_ENTROPY:
                 return torch.nn.CrossEntropyLoss(**self.parameters)
@@ -63,7 +63,7 @@ class MetricParameters(BaseModel):
     display_name: str
     parameters: dict[str, Any] = Field(default_factory=dict)
 
-    def get(self) -> OptimizedMetric | torchmetrics.Metric:
+    def get(self) -> OptimizedMetric | torchmetrics.Metric:  # noqa: PLR0911
         match self.metric_type:
             case MetricType.BINARY_DISTRIBUTION:
                 return BinaryDistribution(**self.parameters)
@@ -310,7 +310,6 @@ class LinkPredictionModelParameters(BaseModelParameters):
 class CallbackType(Enum):
     EARLY_STOPPING = "early_stopping"
     MODEL_CHECKPOINT = "model_checkpoint"
-    IMPLICIT_GRADIENT_CORRECTION = "implicit_gradient_correction"
 
 
 class CallbackParameters(BaseModel):
@@ -329,11 +328,6 @@ class CallbackParameters(BaseModel):
                     if key not in self.parameters:
                         raise ValueError(f"Model checkpoint callback must have a {key} parameter")
                 return ModelCheckpoint(**self.parameters)
-            case CallbackType.IMPLICIT_GRADIENT_CORRECTION:
-                for key in ["metrics_num_parts"]:
-                    if key not in self.parameters:
-                        raise ValueError(f"Implicit gradient correction callback must have a {key} parameter")
-                return ImplicitGradientCorrectionCallback(**self.parameters)
             case _:
                 raise ValueError(f"Invalid callback type: {self.callback_type}")
 

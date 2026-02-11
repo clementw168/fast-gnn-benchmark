@@ -41,9 +41,7 @@ class LinkPredictorBase(torch.nn.Module):
         edges = data.edge_index
 
         x = self.backbone(x, edges)
-        pred = self.classifier(x, x, edges)
-
-        return pred
+        return self.classifier(x, x, edges)
 
 
 class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
@@ -55,7 +53,7 @@ class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
             self.model_parameters.architecture_parameters, self.model_parameters.link_predictor_parameters
         )
 
-    def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
         loss = self.loss(pred, batch.edge_label)
         batch_metrics = self.train_metrics(pred, batch.edge_label)
@@ -69,7 +67,7 @@ class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
 
         return loss
 
-    def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:
+    def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
         loss = self.loss(pred, batch.edge_label)
         batch_metrics = self.val_metrics(pred, batch.edge_label)
@@ -79,7 +77,7 @@ class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
 
         return loss
 
-    def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:
+    def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
         loss = self.loss(pred, batch.edge_label)
         batch_metrics = self.test_metrics(pred, batch.edge_label)

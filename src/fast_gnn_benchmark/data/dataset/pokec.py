@@ -1,10 +1,13 @@
 import pathlib
-from typing import Callable
+from collections.abc import Callable
 
 import gdown
 import scipy
 import torch
 from torch_geometric.data import Data
+
+TRAIN_RATIO = 0.1
+VAL_RATIO = 0.1
 
 
 class PokecDataset:
@@ -37,9 +40,9 @@ class PokecDataset:
         # Follow 1:1:8 ratio for train:val:test from the paper
         random_split = torch.rand(labels.shape[0])
 
-        train_mask = (random_split < 0.1) & (labels != -1)
-        val_mask = (random_split >= 0.1) & (random_split < 0.2) & (labels != -1)
-        test_mask = (random_split >= 0.2) & (labels != -1)
+        train_mask = (random_split < TRAIN_RATIO) & (labels != -1)
+        val_mask = (random_split >= TRAIN_RATIO) & (random_split < TRAIN_RATIO + VAL_RATIO) & (labels != -1)
+        test_mask = (random_split >= TRAIN_RATIO + VAL_RATIO) & (labels != -1)
 
         return Data(
             x=features,

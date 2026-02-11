@@ -14,8 +14,7 @@ class NodeClassifier(torch.nn.Module):
         self.backbone = load_backbone(model_parameters.architecture_parameters)
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
-        x = self.backbone(x, edge_index)
-        return x
+        return self.backbone(x, edge_index)
 
 
 class NodeClassificationModel(BaseGNN[NodeClassificationModelParameters]):
@@ -25,7 +24,7 @@ class NodeClassificationModel(BaseGNN[NodeClassificationModelParameters]):
     def load_model(self) -> torch.nn.Module:
         return NodeClassifier(self.model_parameters)
 
-    def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:
+    def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         y_pred = self.model(batch.x, batch.edge_index)
         y_true: torch.Tensor = batch.y  # type: ignore
 
@@ -42,7 +41,7 @@ class NodeClassificationModel(BaseGNN[NodeClassificationModelParameters]):
 
         return loss
 
-    def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:
+    def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         y_pred = self.model(batch.x, batch.edge_index)
         y_true: torch.Tensor = batch.y  # type: ignore
 
@@ -58,7 +57,7 @@ class NodeClassificationModel(BaseGNN[NodeClassificationModelParameters]):
 
         return loss
 
-    def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:
+    def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         y_pred = self.model(batch.x, batch.edge_index)
         y_true: torch.Tensor = batch.y  # type: ignore
 

@@ -27,9 +27,9 @@ class GNNStack(torch.nn.Module):
         if architecture_parameters.use_residual:
             self.residual_layers = torch.nn.ModuleList()
 
-        assert not (architecture_parameters.use_batch_norm and architecture_parameters.use_layer_norm), (
-            "Cannot use both batch norm and layer norm"
-        )
+        assert not (
+            architecture_parameters.use_batch_norm and architecture_parameters.use_layer_norm
+        ), "Cannot use both batch norm and layer norm"
         if architecture_parameters.use_batch_norm:
             self.batch_norms = torch.nn.ModuleList()
         if architecture_parameters.use_layer_norm:
@@ -112,10 +112,8 @@ class SGC(torch.nn.Module):
             K=architecture_parameters.num_layers,
         )
 
-    def forward(self, x, edge_index):
-        x = self.conv_layers(x, edge_index)
-
-        return x
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
+        return self.conv_layers(x, edge_index)
 
 
 class GAT(torch.nn.Module):
@@ -138,9 +136,9 @@ class GAT(torch.nn.Module):
         if architecture_parameters.use_residual:
             self.residual_layers = torch.nn.ModuleList()
 
-        assert not (architecture_parameters.use_batch_norm and architecture_parameters.use_layer_norm), (
-            "Cannot use both batch norm and layer norm"
-        )
+        assert not (
+            architecture_parameters.use_batch_norm and architecture_parameters.use_layer_norm
+        ), "Cannot use both batch norm and layer norm"
         if architecture_parameters.use_batch_norm:
             self.batch_norms = torch.nn.ModuleList()
 

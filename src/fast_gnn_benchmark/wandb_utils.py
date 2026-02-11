@@ -1,5 +1,4 @@
 import wandb
-
 from fast_gnn_benchmark.models.node_classification import NodeClassificationModel
 from fast_gnn_benchmark.schemas.data_models import DataLoaderTypeChoices, DataParameters
 from fast_gnn_benchmark.schemas.dataset_models import SplitType
@@ -13,15 +12,13 @@ def get_run_id_from_name(run_name: str, entity: str, project: str) -> str:
         raise ValueError(f"No run found for name {run_name}")
 
     # Return the most recent run id for a given run name
-    id = sorted(runs_candidates, key=lambda r: r.created_at, reverse=True)[0].id
-
-    return id
+    return sorted(runs_candidates, key=lambda r: r.created_at, reverse=True)[0].id
 
 
 def load_model_from_wandb(run_id: str, project: str) -> NodeClassificationModel:
     weight_path = f"{project}/{run_id}/checkpoints/best.ckpt"
-    model = NodeClassificationModel.load_from_checkpoint(weight_path, weights_only=False)
-    return model
+
+    return NodeClassificationModel.load_from_checkpoint(weight_path, weights_only=False)
 
 
 def get_test_data_loader(data_parameters: dict) -> DataLoaderTypeChoices:
@@ -34,8 +31,6 @@ def get_test_data_loader(data_parameters: dict) -> DataLoaderTypeChoices:
 
     dataset = data_parameters_model.get_dataset()
 
-    test_data_loader = data_parameters_model.get_data_loader(
+    return data_parameters_model.get_data_loader(
         dataset, SplitType.TEST, data_parameters_model.test_data_loader_parameters
     )
-
-    return test_data_loader

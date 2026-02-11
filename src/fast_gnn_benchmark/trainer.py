@@ -10,8 +10,6 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities.compile import _maybe_unwrap_optimized
 
-from fast_gnn_benchmark.data.dataloaders import OptimizedRandomNodeLoader
-from fast_gnn_benchmark.metrics.implicit_gradient_correction import ImplicitGradientCorrectionCallback
 from fast_gnn_benchmark.models.link_prediction import LinkPredictionModel
 from fast_gnn_benchmark.models.node_classification import NodeClassificationModel
 from fast_gnn_benchmark.schemas.data_models import DataLoaderTypeChoices
@@ -153,13 +151,13 @@ def get_model_to_test(
 def get_device() -> str:
     if torch.backends.mps.is_available():
         return "mps"
-    elif torch.cuda.is_available():
+    if torch.cuda.is_available():
         torch.set_float32_matmul_precision("medium")
         print("Tensor Core optimization enabled (medium precision)")
 
         return "cuda"
-    else:
-        return "cpu"
+
+    return "cpu"
 
 
 def set_group_id_from_wandb(trainer_parameters: TrainerParameters, wandb_logger: WandbLogger) -> None:
@@ -202,15 +200,8 @@ def get_wandb_logger(trainer_parameters: TrainerParameters) -> WandbLogger | Non
     return wandb_logger
 
 
-def get_callbacks(trainer_parameters: TrainerParameters, train_loader: DataLoaderTypeChoices) -> list[L.Callback]:
-    callbacks = [callback.get() for callback in trainer_parameters.callbacks]
-
-    for callback in callbacks:
-        if isinstance(callback, ImplicitGradientCorrectionCallback):
-            assert isinstance(train_loader, OptimizedRandomNodeLoader)
-            callback.set_dataloader(train_loader)
-
-    return callbacks
+def get_callbacks(trainer_parameters: TrainerParameters) -> list[L.Callback]:
+    return [callback.get() for callback in trainer_parameters.callbacks]
 
 
 def check_test_batch(
@@ -240,7 +231,7 @@ def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
     device = get_device()
     model = get_model(trainer_parameters)
 
-    callbacks = get_callbacks(trainer_parameters, train_loader)
+    callbacks = get_callbacks(trainer_parameters)
 
     if trainer_parameters.group_id is None:
         trainer_parameters.group_id = str(uuid.uuid4())
