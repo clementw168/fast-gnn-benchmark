@@ -86,8 +86,6 @@ callbacks:
         filename: best
 
 wandb_logger_parameters:
-  entity: clement_wang
-  project: gnn_experiments
   reinit: true
 
 compilation_parameters:

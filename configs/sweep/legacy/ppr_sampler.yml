@@ -1,7 +1,7 @@
 command:
   - uv
   - run
-  - src/fast_gnn_benchmark/sweep/agent.py
+  - scripts/wandb_sweep_agent.py
 name: products_sage_ppr_sweep_2
 method: bayes # random, grid, bayes
 metric:

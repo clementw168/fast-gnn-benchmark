@@ -23,9 +23,7 @@ def arg_parser() -> argparse.Namespace:
 
 def get_sweep_config(sweep_config_file: str) -> dict[str, Any]:
     with open(sweep_config_file, "r") as file:
-        config = yaml.safe_load(file)
-
-    return config
+        return yaml.safe_load(file)
 
 
 if __name__ == "__main__":

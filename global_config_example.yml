@@ -1,0 +1,3 @@
+wandb_logger_parameters:
+  entity: your_wandb_entity
+  project: your_wandb_project

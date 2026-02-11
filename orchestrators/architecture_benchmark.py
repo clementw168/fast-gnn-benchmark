@@ -37,13 +37,13 @@ if __name__ == "__main__":
                 [
                     "uv",
                     "run",
-                    "src/fast_gnn_benchmark/main.py",
+                    "scripts/main.py",
                     "--config_file",
                     config_file,
                     "--seed",
                     str(seed),
                     "--tag",
-                    "benchmark_architectures",
+                    "architecture_benchmark",
                 ],
                 check=False,
             )

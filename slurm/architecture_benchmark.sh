@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=train_parts_limit
+#SBATCH --job-name=architecture_benchmark
 #SBATCH --output=slurm_logs/%x_%j.out
 #SBATCH --error=slurm_logs/%x_%j.err
 #SBATCH --partition=H100 
@@ -14,9 +14,7 @@ echo "Job started at: $(date)"
 
 
 # Execute the Python script with specific arguments
-uv run scripts/train_parts_limit_products.py
-uv run scripts/train_parts_limit_pokec.py
-uv run scripts/train_parts_limit_arxiv.py
+uv run scripts/architecture_benchmark.py
 
 
 # Print job completion time

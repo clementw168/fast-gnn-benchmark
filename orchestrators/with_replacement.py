@@ -11,7 +11,7 @@ if __name__ == "__main__":
                 [
                     "uv",
                     "run",
-                    "src/fast_gnn_benchmark/main.py",
+                    "scripts/main.py",
                     "--config_file",
                     f"configs/{dataset}/sage_replacement.yml",
                     "--seed",

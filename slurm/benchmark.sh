@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=benchmark
+#SBATCH --job-name=sampling_benchmark
 #SBATCH --output=slurm_logs/%x_%j.out
 #SBATCH --error=slurm_logs/%x_%j.err
 #SBATCH --partition=H100
@@ -14,7 +14,7 @@ echo "Job started at: $(date)"
 
 
 # Execute the Python script with specific arguments
-uv run scripts/run_benchmark.py
+uv run scripts/sampling_benchmark.py
 
 # Print job completion time
 echo "Job finished at: $(date)"

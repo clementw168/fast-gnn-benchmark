@@ -1,9 +1,7 @@
 from pprint import pprint
 
 import wandb
-
-from fast_gnn_benchmark.main import do_run
-from fast_gnn_benchmark.trainer import get_trainer_parameters_from_config
+from fast_gnn_benchmark.trainer import do_run, get_trainer_parameters_from_config
 
 if __name__ == "__main__":
     duplicate_data_loader_parameters = True

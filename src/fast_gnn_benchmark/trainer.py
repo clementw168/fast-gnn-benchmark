@@ -1,4 +1,5 @@
 import random
+import uuid
 from typing import Any
 
 import lightning as L
@@ -49,7 +50,7 @@ def override_nested_dict(nested_dict: dict[str, Any], override_dict: dict[str, A
     """
     for key, value in override_dict.items():
         if key in nested_dict:
-            if isinstance(nested_dict[key], dict):
+            if isinstance(override_dict[key], dict):
                 nested_dict[key] = override_nested_dict(nested_dict[key], value)
             else:
                 nested_dict[key] = value
@@ -60,9 +61,17 @@ def override_nested_dict(nested_dict: dict[str, Any], override_dict: dict[str, A
     return nested_dict
 
 
-def get_trainer_parameters_from_config(config_file: str, override_dict: dict | None = None) -> TrainerParameters:
+def get_trainer_parameters_from_config(
+    config_file: str, override_dict: dict | None = None, import_global_config: bool = True
+) -> TrainerParameters:
     with open(config_file, "r") as file:
         config = yaml.safe_load(file)
+
+    if import_global_config:
+        with open("global_config.yml", "r") as file:
+            global_config = yaml.safe_load(file)
+
+        config = override_nested_dict(config, global_config)
 
     if override_dict is not None:
         config = override_nested_dict(config, override_dict)
@@ -153,15 +162,44 @@ def get_device() -> str:
         return "cpu"
 
 
-def get_wandb_logger(trainer_parameters: TrainerParameters) -> WandbLogger | None:
-    if trainer_parameters.wandb_logger_parameters is not None:
-        if trainer_parameters.wandb_logger_parameters.reinit:
-            trainer_parameters.wandb_logger_parameters.name = None
-            trainer_parameters.wandb_logger_parameters.id = None
+def set_group_id_from_wandb(trainer_parameters: TrainerParameters, wandb_logger: WandbLogger) -> None:
+    if trainer_parameters.group_id is not None:
+        return
 
-        return trainer_parameters.wandb_logger_parameters.get()
-    else:
+    trainer_parameters.group_id = wandb_logger.experiment.name
+
+
+def get_wandb_logger(trainer_parameters: TrainerParameters) -> WandbLogger | None:
+    if trainer_parameters.wandb_logger_parameters is None:
         return None
+
+    if trainer_parameters.wandb_logger_parameters.reinit:
+        trainer_parameters.wandb_logger_parameters.name = None
+        trainer_parameters.wandb_logger_parameters.id = None
+
+    wandb_logger = trainer_parameters.wandb_logger_parameters.get()
+
+    # Set group id from wandb
+    set_group_id_from_wandb(trainer_parameters, wandb_logger)
+
+    # Upload the full config to wandb
+    wandb_logger.experiment.config.update(trainer_parameters.model_dump())
+
+    # Add data to summary for easier visualization
+    if hasattr(trainer_parameters.data_parameters.train_data_loader_parameters, "num_parts"):
+        wandb_logger.experiment.summary["train/num_parts"] = (
+            trainer_parameters.data_parameters.train_data_loader_parameters.num_parts  # type: ignore
+        )
+    if hasattr(trainer_parameters.data_parameters.val_data_loader_parameters, "num_parts"):
+        wandb_logger.experiment.summary["val/num_parts"] = (
+            trainer_parameters.data_parameters.val_data_loader_parameters.num_parts  # type: ignore
+        )
+    if hasattr(trainer_parameters.data_parameters.test_data_loader_parameters, "num_parts"):
+        wandb_logger.experiment.summary["test/num_parts"] = (
+            trainer_parameters.data_parameters.test_data_loader_parameters.num_parts  # type: ignore
+        )
+
+    return wandb_logger
 
 
 def get_callbacks(trainer_parameters: TrainerParameters, train_loader: DataLoaderTypeChoices) -> list[L.Callback]:
@@ -192,3 +230,36 @@ def check_test_batch(
 
     model.train()
     print("Test batch passed")
+
+
+def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
+    wandb_logger = get_wandb_logger(trainer_parameters)
+
+    train_loader, val_loader, test_loader = trainer_parameters.data_parameters.get()
+
+    device = get_device()
+    model = get_model(trainer_parameters)
+
+    callbacks = get_callbacks(trainer_parameters, train_loader)
+
+    if trainer_parameters.group_id is None:
+        trainer_parameters.group_id = str(uuid.uuid4())
+
+    check_test_batch(model, test_loader, device)
+
+    trainer = L.Trainer(
+        **trainer_parameters.trainer_config,
+        accelerator=device,
+        callbacks=callbacks,
+        logger=wandb_logger,
+    )
+
+    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
+
+    model = get_model_to_test(callbacks, model, trainer_parameters)
+    test_metrics = trainer.test(model=model, dataloaders=test_loader)
+
+    if wandb_logger is not None:
+        wandb_logger.experiment.finish()
+
+    return test_metrics  # type: ignore

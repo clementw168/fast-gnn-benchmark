@@ -1,75 +1,9 @@
-import uuid
 from pprint import pprint
 from typing import Any
 
-import lightning as L
 import numpy as np
 
-from fast_gnn_benchmark.schemas.model import TrainerParameters
-from fast_gnn_benchmark.trainer import (
-    check_test_batch,
-    fix_seed,
-    get_callbacks,
-    get_device,
-    get_model,
-    get_model_to_test,
-    get_trainer_parameters_from_config,
-    get_wandb_logger,
-)
-
-
-def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
-    wandb_logger = get_wandb_logger(trainer_parameters)
-
-    train_loader, val_loader, test_loader = trainer_parameters.data_parameters.get()
-
-    device = get_device()
-    model = get_model(trainer_parameters)
-
-    callbacks = get_callbacks(trainer_parameters, train_loader)
-
-    if wandb_logger is not None:
-        group_id = (
-            trainer_parameters.group_id if trainer_parameters.group_id is not None else wandb_logger.experiment.name
-        )
-        trainer_parameters.group_id = group_id
-
-        wandb_logger.experiment.config.update(trainer_parameters.model_dump())
-
-        if hasattr(trainer_parameters.data_parameters.train_data_loader_parameters, "num_parts"):
-            wandb_logger.experiment.summary["train/num_parts"] = (
-                trainer_parameters.data_parameters.train_data_loader_parameters.num_parts  # type: ignore
-            )
-        if hasattr(trainer_parameters.data_parameters.val_data_loader_parameters, "num_parts"):
-            wandb_logger.experiment.summary["val/num_parts"] = (
-                trainer_parameters.data_parameters.val_data_loader_parameters.num_parts  # type: ignore
-            )
-        if hasattr(trainer_parameters.data_parameters.test_data_loader_parameters, "num_parts"):
-            wandb_logger.experiment.summary["test/num_parts"] = (
-                trainer_parameters.data_parameters.test_data_loader_parameters.num_parts  # type: ignore
-            )
-
-    if trainer_parameters.group_id is None:
-        trainer_parameters.group_id = str(uuid.uuid4())
-
-    check_test_batch(model, test_loader, device)
-
-    trainer = L.Trainer(
-        **trainer_parameters.trainer_config,
-        accelerator=device,
-        callbacks=callbacks,
-        logger=wandb_logger,
-    )
-
-    trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
-
-    model = get_model_to_test(callbacks, model, trainer_parameters)
-    test_metrics = trainer.test(model=model, dataloaders=test_loader)
-
-    if wandb_logger is not None:
-        wandb_logger.experiment.finish()
-
-    return test_metrics  # type: ignore
+from fast_gnn_benchmark.trainer import do_run, fix_seed, get_trainer_parameters_from_config
 
 
 def main(file_path: str, override_dict: dict[str, Any] = {}) -> None:

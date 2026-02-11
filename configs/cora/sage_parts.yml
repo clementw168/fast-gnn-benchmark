@@ -81,8 +81,6 @@ compilation_parameters:
   full_graph: false
 
 wandb_logger_parameters:
-  entity: clement_wang
-  project: gnn_experiments
   reinit: true
 
 trainer_config:

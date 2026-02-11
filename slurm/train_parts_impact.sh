@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=drop_edge_sweep
+#SBATCH --job-name=train_parts_limit
 #SBATCH --output=slurm_logs/%x_%j.out
 #SBATCH --error=slurm_logs/%x_%j.err
 #SBATCH --partition=H100 
@@ -14,7 +14,7 @@ echo "Job started at: $(date)"
 
 
 # Execute the Python script with specific arguments
-uv run scripts/dropedge_sweep.py
+uv run scripts/train_parts_impact.py
 
 
 # Print job completion time
