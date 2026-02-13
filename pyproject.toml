@@ -61,6 +61,7 @@ ignore = [
     "SIM118",  # do not use dict.keys()
     "PTH108",  # use pathlib instead of os.unlink()
     "PTH103",  # use pathlib instead of os.makedirs()
+    "PTH113",  # use pathlib instead of os.path.isfile()
     # TODO Get rid of those ignore by fixing them
     "SIM108",  # use ternary operator instead of if-else-block
     "B006",    # do not use mutable data structures for argument defaults
