@@ -16,6 +16,7 @@ from fast_gnn_benchmark.data.dataloaders import (
     RandomNodeLoaderWrapper,
     RandomWalkLoaderWrapper,
 )
+from fast_gnn_benchmark.data.dataset.ogbl import FixLinkPropPredDataset
 from fast_gnn_benchmark.data.dataset.ogbn import OGBNDataset
 from fast_gnn_benchmark.data.dataset.ogbn_on_disk import OGBNDatasetOnDisk, OGBNDatasetOnRAM
 from fast_gnn_benchmark.data.dataset.pokec import PokecDataset
@@ -35,7 +36,16 @@ from fast_gnn_benchmark.schemas.dataset_models import (
     TransformType,
 )
 
-DatasetTypeChoices = Dataset | OGBNDataset | PokecDataset | OGBNDatasetOnDisk | OGBNDatasetOnRAM | Amazon | Coauthor
+DatasetTypeChoices = (
+    Dataset
+    | OGBNDataset
+    | PokecDataset
+    | OGBNDatasetOnDisk
+    | OGBNDatasetOnRAM
+    | Amazon
+    | Coauthor
+    | FixLinkPropPredDataset
+)
 
 DataLoaderTypeChoices = (
     BaseDataLoader
@@ -158,6 +168,27 @@ class DataParameters(BaseModel):
 
             case DatasetType.POKEC:
                 dataset = PokecDataset(root="./datasets/pokec", transform=transforms)
+
+            case DatasetType.OGBL_PPA:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-ppa", transform=transforms)
+
+            case DatasetType.OGBL_COLLAB:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-collab", transform=transforms)
+
+            case DatasetType.OGBL_DDI:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-ddi", transform=transforms)
+
+            case DatasetType.OGBL_CITATION2:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-citation2", transform=transforms)
+
+            case DatasetType.OGBL_WIKIKG2:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-wikikg2", transform=transforms)
+
+            case DatasetType.OGBL_BIOKG:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-biokg", transform=transforms)
+
+            case DatasetType.OGBL_VESSEL:
+                dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-vessel", transform=transforms)
 
             case _:
                 raise ValueError(f"Invalid dataset type: {self}")

@@ -27,6 +27,7 @@ class SplitType(Enum):
 
 
 class DatasetType(Enum):
+    # Node classification
     CORA = "cora"
     CITESEER = "citeseer"
     PUBMED = "pubmed"
@@ -40,6 +41,15 @@ class DatasetType(Enum):
     OGBN_PAPERS100M_ON_DISK = "ogbn-papers100M-on-disk"
     OGBN_PAPERS100M_ON_RAM = "ogbn-papers100M-on-ram"
     POKEC = "pokec"
+
+    # Link prediction
+    OGBL_PPA = "ogbl-ppa"
+    OGBL_COLLAB = "ogbl-collab"
+    OGBL_DDI = "ogbl-ddi"
+    OGBL_CITATION2 = "ogbl-citation2"
+    OGBL_WIKIKG2 = "ogbl-wikikg2"
+    OGBL_BIOKG = "ogbl-biokg"
+    OGBL_VESSEL = "ogbl-vessel"
 
 
 class DataLoaderType(Enum):
