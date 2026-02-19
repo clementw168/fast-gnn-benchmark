@@ -3,19 +3,13 @@ from torch_geometric.data import Data
 
 from fast_gnn_benchmark.models.backbones import load_backbone
 from fast_gnn_benchmark.models.base_model import BaseGNN
+from fast_gnn_benchmark.models.link_prediction_heads import CosineSimilarityClassifier, Hadamard_MLPPredictor
 from fast_gnn_benchmark.schemas.model import (
     ArchitectureParametersChoices,
     LinkPredictionModelParameters,
     LinkPredictorParameters,
     LinkPredictorType,
 )
-
-
-class CosineSimilarityClassifier(torch.nn.Module):
-    def forward(
-        self, embedding_1: torch.Tensor, embedding_2: torch.Tensor, edge_label_index: torch.Tensor
-    ) -> torch.Tensor:
-        return (embedding_1[edge_label_index[0]] * embedding_2[edge_label_index[1]]).sum(dim=-1)
 
 
 class LinkPredictorBase(torch.nn.Module):
@@ -33,6 +27,16 @@ class LinkPredictorBase(torch.nn.Module):
         match self.link_predictor_parameters.link_predictor_type:
             case LinkPredictorType.COSINE_SIMILARITY:
                 return CosineSimilarityClassifier()
+
+            case LinkPredictorType.HADAMARD_MLP:
+                return Hadamard_MLPPredictor(
+                    hidden_dim=self.architecture_parameters.output_dim,
+                    dropout=self.link_predictor_parameters.parameters["dropout"],
+                    num_layers=self.link_predictor_parameters.parameters["num_layers"],
+                    use_residual=self.link_predictor_parameters.parameters["use_residual"],
+                    use_layer_norm=self.link_predictor_parameters.parameters["use_layer_norm"],
+                )
+
             case _:
                 raise ValueError(f"Invalid classifier type: {self.link_predictor_parameters.link_predictor_type}")
 
@@ -41,7 +45,8 @@ class LinkPredictorBase(torch.nn.Module):
         edges = data.edge_index
 
         x = self.backbone(x, edges)
-        return self.classifier(x, x, edges)
+
+        return self.classifier(x, x, data.target_edges)
 
 
 class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
@@ -55,34 +60,32 @@ class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
 
     def training_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
-        loss = self.loss(pred, batch.edge_label)
-        batch_metrics = self.train_metrics(pred, batch.edge_label)
+        loss = self.loss(pred, batch.y)
+        batch_metrics = self.train_metrics(pred, batch.y)
         self.log_dict(
             {"train/loss": loss, **batch_metrics},
             on_step=True,
             on_epoch=True,
-            batch_size=batch.edge_label.shape[0],
+            batch_size=batch.y.shape[0],  # type: ignore
             prog_bar=True,
-        )  # type: ignore
+        )
 
         return loss
 
     def validation_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
-        loss = self.loss(pred, batch.edge_label)
-        batch_metrics = self.val_metrics(pred, batch.edge_label)
-        self.log_dict(
-            {"val/loss": loss, **batch_metrics}, on_epoch=True, batch_size=batch.edge_label.shape[0], prog_bar=True
-        )  # type: ignore
+        loss = self.loss(pred, batch.y)
+        batch_metrics = self.val_metrics(pred, batch.y)
+        self.log_dict({"val/loss": loss, **batch_metrics}, on_epoch=True, batch_size=batch.y.shape[0], prog_bar=True)  # type: ignore
 
         return loss
 
     def test_step(self, batch: Data, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
-        loss = self.loss(pred, batch.edge_label)
-        batch_metrics = self.test_metrics(pred, batch.edge_label)
-        self.log_dict(
-            {"test/loss": loss, **batch_metrics}, on_epoch=True, batch_size=batch.edge_label.shape[0], prog_bar=True
-        )  # type: ignore
+
+        loss = self.loss(pred, batch.y)
+
+        batch_metrics = self.test_metrics(pred, batch.y)
+        self.log_dict({"test/loss": loss, **batch_metrics}, on_epoch=True, batch_size=batch.y.shape[0], prog_bar=True)  # type: ignore
 
         return loss

@@ -1,0 +1,98 @@
+
+
+parameters:
+  input_dim: &input_dim 58
+
+
+seed: 42
+
+data_parameters:
+  dataset_type: ogbl-ppa
+  # transforms: 
+    # - "normalize_features"
+  to_undirected: false
+  add_self_loops_and_remove_duplicate_edges: false
+  remove_duplicate_edges: false
+  train_data_loader_parameters:
+    data_loader_type: link_loader
+    batch_size: 131072
+    mask_loss_edges: false
+    max_rejection_sampling_iterations: 2
+    negative_sampling_ratio: 0.5
+    on_device: true
+  val_data_loader_parameters:
+    data_loader_type: link_loader
+    batch_size: 131072
+    negative_sampling_ratio: 0.5
+    on_device: true
+  test_data_loader_parameters:
+    data_loader_type: link_loader
+    batch_size: 131072
+    negative_sampling_ratio: 0.5
+    on_device: true
+
+model_parameters:
+  task_type: link_prediction
+  architecture_parameters:
+      architecture_type: gcn
+      input_dim: *input_dim
+      hidden_dim: 128
+      output_dim: 128
+      num_layers: 5
+      dropout: 0.1
+      use_input_projection: false
+      use_output_projection: false
+      use_residual: false
+      use_layer_norm: false
+
+  link_predictor_parameters:
+    link_predictor_type: hadamard_mlp
+    parameters:
+      dropout: 0.1
+      num_layers: 5
+      use_residual: true
+      use_layer_norm: false
+
+  loss:
+      loss_type: bce_with_logits_loss
+
+  metrics: []
+    # - metric_type: optimized_accuracy
+    #   display_name: accuracy
+    # - metric_type: optimized_f1
+    #   display_name: f1
+    # - metric_type: optimized_precision
+    #   display_name: precision
+    # - metric_type: optimized_recall
+    #   display_name: recall
+
+  optimizer:
+    optimizer_type: adam
+    parameters:
+      lr: 0.001
+      weight_decay: 0.00005
+
+callbacks: 
+    # - callback_type: early_stopping
+    #   parameters:
+    #     monitor: val/loss
+    #     patience: 10
+    #     mode: "min"
+    - callback_type: model_checkpoint
+      parameters:
+        monitor: val/accuracy
+        mode: max
+        save_top_k: 1
+        filename: best
+
+wandb_logger_parameters:
+  reinit: true
+
+compilation_parameters:
+  use_compiled_torch: false
+  full_graph: false
+
+trainer_config:
+  max_epochs: 200
+  log_every_n_steps: 1
+

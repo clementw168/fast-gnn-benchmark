@@ -1,10 +1,15 @@
 from pydantic import BaseModel, Field, field_validator
 from torch_geometric.data import Dataset
 from torch_geometric.datasets import Amazon, Coauthor, Planetoid
-from torch_geometric.loader import LinkNeighborLoader
 from torch_geometric.transforms import Compose
 
-from fast_gnn_benchmark.data.dataloaders import (
+from fast_gnn_benchmark.data.dataset.ogbl import FixLinkPropPredDataset
+from fast_gnn_benchmark.data.dataset.ogbn import OGBNDataset
+from fast_gnn_benchmark.data.dataset.ogbn_on_disk import OGBNDatasetOnDisk, OGBNDatasetOnRAM
+from fast_gnn_benchmark.data.dataset.pokec import PokecDataset
+from fast_gnn_benchmark.data.dataset.split_strategies import random_split_dataset, resplit_planetoid_dataset
+from fast_gnn_benchmark.data.link_dataloader import LinkLoader
+from fast_gnn_benchmark.data.node_dataloaders import (
     BaseDataLoader,
     ClusterLoaderWrapper,
     DropEdgeLoader,
@@ -16,14 +21,10 @@ from fast_gnn_benchmark.data.dataloaders import (
     RandomNodeLoaderWrapper,
     RandomWalkLoaderWrapper,
 )
-from fast_gnn_benchmark.data.dataset.ogbl import FixLinkPropPredDataset
-from fast_gnn_benchmark.data.dataset.ogbn import OGBNDataset
-from fast_gnn_benchmark.data.dataset.ogbn_on_disk import OGBNDatasetOnDisk, OGBNDatasetOnRAM
-from fast_gnn_benchmark.data.dataset.pokec import PokecDataset
-from fast_gnn_benchmark.data.dataset.split_strategies import random_split_dataset, resplit_planetoid_dataset
 from fast_gnn_benchmark.data.utils import (
     add_self_loops_and_remove_duplicate_edges,
-    print_data_properties,
+    print_data_properties_link_prediction,
+    print_data_properties_node_classification,
     remove_duplicate_edges,
     remove_self_loops,
     to_undirected,
@@ -56,9 +57,9 @@ DataLoaderTypeChoices = (
     | RandomWalkLoaderWrapper
     | ClusterLoaderWrapper
     | PPRNodeLoader
-    | LinkNeighborLoader
     | RandomNodeLoaderWithReplacement
     | DropEdgeLoader
+    | LinkLoader
 )
 
 
@@ -171,6 +172,7 @@ class DataParameters(BaseModel):
 
             case DatasetType.OGBL_PPA:
                 dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-ppa", transform=transforms)
+                dataset.data.x = dataset.data.x.float()
 
             case DatasetType.OGBL_COLLAB:
                 dataset = FixLinkPropPredDataset(root="./datasets/ogbl/", name="ogbl-collab", transform=transforms)
@@ -217,7 +219,18 @@ class DataParameters(BaseModel):
             print(f"Removing self-loops for {self.dataset_type}")
             dataset[0].edge_index = remove_self_loops(dataset[0].edge_index)  # type: ignore
 
-        print_data_properties(dataset[0])  # type: ignore
+        if self.dataset_type not in [
+            DatasetType.OGBL_PPA,
+            DatasetType.OGBL_COLLAB,
+            DatasetType.OGBL_DDI,
+            DatasetType.OGBL_CITATION2,
+            DatasetType.OGBL_WIKIKG2,
+            DatasetType.OGBL_BIOKG,
+            DatasetType.OGBL_VESSEL,
+        ]:
+            print_data_properties_node_classification(dataset[0])  # type: ignore
+        else:
+            print_data_properties_link_prediction(dataset[0])  # type: ignore
 
         return dataset
 
@@ -324,8 +337,16 @@ class DataParameters(BaseModel):
                     pin_memory=data_loader_parameters.pin_memory,
                     split_type=split_type,
                 )
-            case DataLoaderType.LINK_NEIGHBOR_LOADER:
-                raise ValueError("Link neighbor loader is not supported yet")
+            case DataLoaderType.LINK_LOADER:
+                return LinkLoader(
+                    dataset,
+                    batch_size=data_loader_parameters.batch_size,
+                    mask_loss_edges=data_loader_parameters.mask_loss_edges,
+                    max_rejection_sampling_iterations=data_loader_parameters.max_rejection_sampling_iterations,
+                    negative_sampling_ratio=data_loader_parameters.negative_sampling_ratio,
+                    on_device=data_loader_parameters.on_device,
+                    split_type=split_type,
+                )
 
             case _:
                 raise ValueError(f"Invalid data loader type: {data_loader_parameters.data_loader_type}")

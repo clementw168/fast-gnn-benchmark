@@ -57,7 +57,7 @@ def remove_isolated_nodes(data: Data) -> None:
         data.test_mask = data.test_mask[mask]
 
 
-def print_data_properties(data: Data, show_all: bool = False) -> None:
+def print_data_properties_node_classification(data: Data, show_all: bool = False) -> None:
     """
     Print the properties of the dataset.
     """
@@ -82,6 +82,12 @@ def print_data_properties(data: Data, show_all: bool = False) -> None:
         print(f"Has isolated nodes: {data.has_isolated_nodes()}")
         print(f"Has self-loops: {data.has_self_loops()}")
         print(f"Is undirected: {data.is_undirected()}")
+
+
+def print_data_properties_link_prediction(data: Data) -> None:
+    print("Number of nodes:", data.x.shape[0])  # type: ignore
+    print("Number of train edges (with repetition):", data.edge_index.shape[1])  # type: ignore
+    print("Number of features:", data.x.shape[1])  # type: ignore
 
 
 def remove_duplicate_edges(edges: torch.Tensor) -> torch.Tensor:

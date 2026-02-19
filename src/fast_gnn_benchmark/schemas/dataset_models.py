@@ -63,7 +63,7 @@ class DataLoaderType(Enum):
     CLUSTER_LOADER = "cluster_loader"
     PPR_NODE_LOADER = "ppr_node_loader"
     DROP_EDGE_LOADER = "drop_edge_loader"
-    LINK_NEIGHBOR_LOADER = "link_neighbor_loader"
+    LINK_LOADER = "link_loader"
 
 
 class DataLoaderParameters(BaseModel):
@@ -148,8 +148,13 @@ class PPRNodeLoaderParameters(DataLoaderParameters):
     pin_memory: bool = False
 
 
-class LinkNeighborLoaderParameters(DataLoaderParameters):
-    data_loader_type: Literal[DataLoaderType.LINK_NEIGHBOR_LOADER] = DataLoaderType.LINK_NEIGHBOR_LOADER
+class LinkLoaderParameters(DataLoaderParameters):
+    data_loader_type: Literal[DataLoaderType.LINK_LOADER] = DataLoaderType.LINK_LOADER
+    batch_size: int
+    mask_loss_edges: bool = True
+    max_rejection_sampling_iterations: int = 3
+    negative_sampling_ratio: float = 0.5
+    on_device: bool = True
 
 
 class DropEdgeLoaderParameters(DataLoaderParameters):
@@ -168,8 +173,8 @@ DataLoaderParametersChoices = Annotated[
     | RandomWalkLoaderParameters
     | ClusterLoaderParameters
     | PPRNodeLoaderParameters
-    | LinkNeighborLoaderParameters
     | RandomNodeLoaderWithReplacementParameters
-    | DropEdgeLoaderParameters,
+    | DropEdgeLoaderParameters
+    | LinkLoaderParameters,
     Field(discriminator="data_loader_type"),
 ]

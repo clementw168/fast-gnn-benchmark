@@ -24,6 +24,7 @@ from fast_gnn_benchmark.schemas.data_models import DataParameters
 
 class LossType(Enum):
     CROSS_ENTROPY = "cross_entropy"
+    BCE_WITH_LOGITS_LOSS = "bce_with_logits_loss"
 
 
 class LossParameters(BaseModel):
@@ -31,12 +32,11 @@ class LossParameters(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
 
     def get(self) -> torch.nn.Module:
-        assert (
-            "reduction" in self.parameters and self.parameters["reduction"] == "none"
-        ), "Current implementation only supports reduction=none"
         match self.loss_type:
             case LossType.CROSS_ENTROPY:
                 return torch.nn.CrossEntropyLoss(**self.parameters)
+            case LossType.BCE_WITH_LOGITS_LOSS:
+                return torch.nn.BCEWithLogitsLoss(**self.parameters)
             case _:
                 raise ValueError(f"Invalid loss type: {self.loss_type}")
 
@@ -292,6 +292,7 @@ class NodeClassificationModelParameters(BaseModelParameters):
 
 class LinkPredictorType(Enum):
     COSINE_SIMILARITY = "cosine_similarity"
+    HADAMARD_MLP = "hadamard_mlp"
 
 
 class LinkPredictorParameters(BaseModel):
