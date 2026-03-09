@@ -29,3 +29,15 @@ cluster-info:
 		done < <(sinfo -h -p "$$p" -N -o %N); \
 		printf "%-12s free_gpus=%d\n" "$$p" "$$sum"; \
 	done'
+
+get_cluster:
+	@test -n "$(CLUSTER)" || (echo "Usage: make get_cluster CLUSTER=cluster_name"; exit 1)
+	sinteractive -p $(CLUSTER) -c 32 --mem 100G --time 10:00:00
+
+run_sweep:
+	@test -n "$(SWEEP_ID)" || (echo "Usage: make run_sweep SWEEP_ID=sweep_id"; exit 1)
+	sbatch --export=SWEEP_ID=$(SWEEP_ID) slurm/sweep_agent.sh
+
+run_config:
+	@test -n "$(CONFIG_FILE)" || (echo "Usage: make run_config CONFIG_FILE=path/to/config.yml"; exit 1)
+	sbatch --export=CONFIG_FILE=$(CONFIG_FILE) slurm/run_config.sh
