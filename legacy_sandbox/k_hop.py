@@ -3,10 +3,13 @@ from math import ceil
 from typing import Any
 
 import torch
+from torch_geometric.data import Data
 from torch_geometric.transforms import ToSparseTensor
 from torch_sparse import SparseTensor
 
+from fast_gnn_benchmark.data.link_dataloader import cannonize_positive_edges, rejection_sampling_negative_edges
 from fast_gnn_benchmark.data.node_dataloaders import SplitType
+from fast_gnn_benchmark.data.utils import to_undirected
 
 
 def get_next_hop_neighbors(
@@ -70,25 +73,42 @@ def get_k_hop_neighbors(
     k_list: list[int],
     device: torch.device,
     sort_output: bool = False,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """
+    Get the k-hop neighbors for the given source nodes.
+    Returns:
+        neighbors: The k-hop neighbors for the given source nodes. (N, K)
+        seeds: The seeds for the k-hop neighbors. (N, K)
+        distance: The distance from the source nodes to the k-hop neighbors. (N, K)
+    """
     neighbors_accumulator = [src_nodes]
-    src_accumulator = [src_nodes]
+    seeds_accumulator = [src_nodes]
+    distance_accumulator = [torch.zeros_like(src_nodes, dtype=torch.long, device=device)]
 
     hop_src = src_nodes
-    for k in k_list:
+    for distance, k in enumerate(k_list):
         current_hop_neighbors = get_next_hop_neighbors(hop_src, CSR_adjacency_matrix, max_neighbors=k, device=device)
         hop_neighbors, hop_src = flatten_hop_neighbors(current_hop_neighbors, hop_src)
+        current_distance_vector = torch.full(
+            (hop_neighbors.shape[0],),
+            distance + 1,
+            dtype=torch.long,
+            device=device,
+        )
 
         neighbors_accumulator.append(hop_neighbors)
-        src_accumulator.append(hop_src)
+        seeds_accumulator.append(hop_src)
+        distance_accumulator.append(current_distance_vector)
 
     neighbors = torch.cat(neighbors_accumulator, dim=0)
-    src = torch.cat(src_accumulator, dim=0)
-    if sort_output:
-        indices = torch.argsort(src, dim=1)
-        return neighbors[indices], src[indices]
+    seeds = torch.cat(seeds_accumulator, dim=0)
+    distance = torch.cat(distance_accumulator, dim=0)
 
-    return neighbors, src
+    if sort_output:
+        indices = torch.argsort(seeds, dim=1)
+        return neighbors[indices], seeds[indices], distance[indices]
+
+    return neighbors, seeds, distance
 
 
 class KHopNeighborsLoader:
@@ -140,26 +160,157 @@ class KHopNeighborsLoader:
         for start_idx in range(0, len(self.candidate_src_nodes), self.batch_size):
             src_nodes = self.candidate_src_nodes[random_indices[start_idx : start_idx + self.batch_size]]
 
-            neighbors, neighbors_src = get_k_hop_neighbors(
+            neighbors, _, distance = get_k_hop_neighbors(
                 src_nodes, self.CSR_adjacency_matrix, self.num_neighbors, self.device
             )
             subgraph = self.data.subgraph(neighbors)
             subgraph = self.to_sparse_tensor(subgraph)
             subgraph.edge_index = subgraph.adj_t
-            subgraph.compute_mask = neighbors == neighbors_src
+            subgraph.compute_mask = distance == 0
             yield subgraph
 
 
-class SealLoader:
-    def __init__(self, dataset: Any, batch_size: int, on_device: bool = True, split_type: SplitType = SplitType.TRAIN):
+class SealModifiedLoader:
+    """
+    Modified version of SEAL, where only take the relative position
+    to one of the source nodes for computational efficiency.
+    """
+
+    def __init__(
+        self,
+        dataset: Any,
+        batch_size: int,
+        num_neighbors: list[int],
+        max_rejection_sampling_iterations: int = 3,
+        negative_sampling_ratio: float = 0.5,
+        on_device: bool = True,
+        split_type: SplitType = SplitType.TRAIN,
+    ):
         if on_device:
             self.device = torch.accelerator.current_accelerator() or torch.device("cpu")
         else:
             self.device = torch.device("cpu")
 
-        self.data = dataset[0].to(self.device)
+        self.data = dataset.data.to(self.device)
+        self.CSR_adjacency_matrix = self.to_sparse_tensor(self.data).adj_t
+        self.num_nodes = dataset.num_nodes
         self.batch_size = batch_size
         self.split_type = split_type
+        self.num_neighbors = num_neighbors
+        self.max_rejection_sampling_iterations = max_rejection_sampling_iterations
+        self.positive_per_batch = batch_size - int(batch_size * negative_sampling_ratio)
+
+        self.to_sparse_tensor = ToSparseTensor()
+
+        match split_type:
+            case SplitType.TRAIN:
+                self.positive_edges, self.non_negative_edges_ids = cannonize_positive_edges(
+                    dataset, self.num_nodes, self.device, remove_self_loops=True
+                )
+
+            case SplitType.VAL:
+                splits = dataset.split["valid"]
+                positive_edges = splits["edge"].T
+                negative_edges = splits["edge_neg"].T
+                self.target_edges = torch.cat([positive_edges, negative_edges], dim=1).to(self.device)
+                self.labels = torch.cat(
+                    [torch.ones(positive_edges.shape[1]), torch.zeros(negative_edges.shape[1])], dim=0
+                ).to(self.device)
+
+            case SplitType.TEST:
+                splits = dataset.split["test"]
+                positive_edges = splits["edge"].T
+                negative_edges = splits["edge_neg"].T
+                self.target_edges = torch.cat([positive_edges, negative_edges], dim=1).to(self.device)
+                self.labels = torch.cat(
+                    [torch.ones(positive_edges.shape[1]), torch.zeros(negative_edges.shape[1])], dim=0
+                ).to(self.device)
+            case _:
+                raise ValueError(f"Invalid split type: {split_type}")
+
+    def __len__(self) -> int:
+        return max(self.target_edges.shape[1] // self.batch_size, 1)
+
+    def __iter__(self) -> Iterator[Data]:
+        return self.get_iterator()
+
+    def get_iterator(self) -> Iterator[Data]:
+        if self.split_type == SplitType.TRAIN:
+            for start_idx in range(0, self.positive_edges.shape[1], self.positive_per_batch):
+                end_idx = start_idx + self.positive_per_batch
+
+                positive_edges = self.positive_edges[:, start_idx:end_idx]
+                negative_edges = rejection_sampling_negative_edges(
+                    positive_edges.shape[1],
+                    self.non_negative_edges_ids,
+                    self.num_nodes,
+                    self.max_rejection_sampling_iterations,
+                    self.device,
+                )
+                target_edges = torch.cat([positive_edges, negative_edges], dim=1)
+                labels = torch.cat(
+                    [
+                        torch.ones(positive_edges.shape[1], device=self.device),
+                        torch.zeros(negative_edges.shape[1], device=self.device),
+                    ],
+                    dim=0,
+                )
+
+                data = Data(
+                    x=self.data.x,
+                    edge_index=self.data.edge_index,
+                    target_edges=target_edges,
+                    y=labels,
+                )
+
+                data = self.to_sparse_tensor(data)
+                data.edge_index = data.adj_t
+
+                yield data
+
+        else:
+            for start_idx in range(0, self.target_edges.shape[1], self.batch_size):
+                end_idx = start_idx + self.batch_size
+                target_edges = self.target_edges[:, start_idx:end_idx]
+                labels = self.labels[start_idx:end_idx]
+                data = Data(
+                    x=self.data.x,
+                    edge_index=self.data.edge_index,
+                    target_edges=target_edges,
+                    y=labels,
+                )
+
+                data = self.to_sparse_tensor(data)
+                data.edge_index = data.adj_t
+
+                yield data
+
+    def get_seal_subgraph(self, target_edges: torch.Tensor) -> Data:
+        """
+        Get the subgraph for the target edges. target_edge is a tensor of shape (2, B) where B is the number of target edges.
+        """
+        src_nodes = target_edges[0, :]
+        dst_nodes = target_edges[1, :]
+        neighbors_src, neighbors_src_seeds, distance_src = get_k_hop_neighbors(
+            src_nodes, self.CSR_adjacency_matrix, self.num_neighbors, self.device
+        )
+        neighbors_dst, neighbors_dst_seeds, distance_dst = get_k_hop_neighbors(
+            dst_nodes, self.CSR_adjacency_matrix, self.num_neighbors, self.device
+        )
+
+        src_features = self.get_enclosing_graphs_features(neighbors_src)
+        dst_features = self.get_enclosing_graphs_features(neighbors_dst)
+
+        raise NotImplementedError("Not implemented")
+
+    def get_enclosing_graphs_features(self, k_hop_neighbors: torch.Tensor) -> torch.Tensor:
+        return self.data.x[k_hop_neighbors]
+
+    def add_positional_encoding(self, enclosing_features: torch.Tensor, distance: torch.Tensor) -> torch.Tensor:
+        pass
+
+    def create_pyg_data(self, enclosing_features: torch.Tensor) -> Data:
+        pass
 
 
 if __name__ == "__main__":

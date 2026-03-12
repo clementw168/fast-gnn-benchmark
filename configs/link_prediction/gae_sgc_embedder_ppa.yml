@@ -109,7 +109,7 @@ compilation_parameters:
   full_graph: false
 
 trainer_config:
-  # max_time: 00:01:00:00
-  max_epochs: 200
+  max_time: 00:01:00:00
+  # max_epochs: 200
   log_every_n_steps: 1
 
