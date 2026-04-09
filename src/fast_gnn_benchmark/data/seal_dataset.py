@@ -131,9 +131,7 @@ class SEALDatasetCpp(Dataset):
         device = torch.device("cpu")
 
         if split_type == SplitType.TRAIN:
-            pos_edges, non_neg_ids = cannonize_positive_edges(
-                dataset, num_nodes, device, remove_self_loops=True
-            )
+            pos_edges, non_neg_ids = cannonize_positive_edges(dataset, num_nodes, device, remove_self_loops=True)
             neg_edges = rejection_sampling_negative_edges(
                 pos_edges.shape[1],
                 non_neg_ids,
@@ -208,8 +206,29 @@ if __name__ == "__main__":
     dataset = FixLinkPropPredDataset(name="ogbl-ppa", root="./datasets/ogbl/")
     seal_train = SEALDatasetCpp(dataset, split_type=SplitType.TRAIN, num_neighbors=[20, 10])
     loader = DataLoader(
-        seal_train, batch_size=2048, shuffle=True,
-        num_workers=32, persistent_workers=True,
+        seal_train,
+        batch_size=2048,
+        shuffle=True,
+        num_workers=32,
+        persistent_workers=True,
     )
-    for batch in tqdm(loader, desc="Processing batch"):
-        pass
+    for i, batch in enumerate(tqdm(loader, desc="Processing batch")):
+        print("--------------------------------")
+        print(i)
+        print("batch: ", batch)
+        print("batch.x.shape: ", batch.x.shape)
+        print("batch.edge_index.shape: ", batch.edge_index.shape)
+        print("batch.z.shape: ", batch.z.shape)
+        print("batch.node_id.shape: ", batch.node_id.shape)
+        print("batch.y.shape: ", batch.y.shape)
+        print("batch.num_nodes: ", batch.num_nodes)
+
+        print()
+        print("batch.x: ", batch.x)
+        print("batch.edge_index: ", batch.edge_index)
+        print("batch.z: ", batch.z)
+        print("batch.node_id: ", batch.node_id)
+        print("batch.y: ", batch.y)
+        print("batch.num_nodes: ", batch.num_nodes)
+        if i > 3:
+            break
