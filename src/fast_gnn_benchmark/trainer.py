@@ -227,7 +227,13 @@ def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
 
     callbacks = get_callbacks(trainer_parameters)
 
-    check_test_batch(model, test_loader, device)
+    eval_device = "cpu" if trainer_parameters.eval_on_cpu else device
+
+    if trainer_parameters.eval_on_cpu and hasattr(test_loader, "device"):
+        test_loader.device = torch.device("cpu")
+        print("Evaluation will run on CPU")
+
+    check_test_batch(model, test_loader, eval_device)
 
     trainer = L.Trainer(
         **trainer_parameters.trainer_config,
@@ -239,7 +245,12 @@ def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
     model = get_model_to_test(callbacks, model, trainer_parameters)
-    test_metrics = trainer.test(model=model, dataloaders=test_loader)
+
+    if trainer_parameters.eval_on_cpu:
+        eval_trainer = L.Trainer(accelerator="cpu", logger=wandb_logger)
+        test_metrics = eval_trainer.test(model=model, dataloaders=test_loader)
+    else:
+        test_metrics = trainer.test(model=model, dataloaders=test_loader)
 
     if wandb_logger is not None:
         wandb_logger.experiment.finish()

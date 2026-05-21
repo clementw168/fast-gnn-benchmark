@@ -403,3 +403,4 @@ class TrainerParameters(BaseModel):
     wandb_logger_parameters: WandbLoggerParameters | None = None
     compilation_parameters: CompilationParameters = Field(default_factory=CompilationParameters)
     trainer_config: dict[str, Any] = Field(default_factory=dict)
+    eval_on_cpu: bool = False

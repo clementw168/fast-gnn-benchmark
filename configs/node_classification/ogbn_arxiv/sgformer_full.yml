@@ -35,24 +35,25 @@ model_parameters:
   architecture_parameters:
       architecture_type: sgformer
       input_dim: *input_dim
-      hidden_dim: 200
+      hidden_dim: 256
       output_dim: *num_classes
-      num_layers: 2
+      num_layers: 1
       alpha: 0.5
-      dropout: 0.4
+      dropout: 0.5
       num_heads: 1
-      use_layer_norm: true
+      use_layer_norm: false
+      use_batch_norm: true
       use_residual: true
       use_graph: true
-      use_weight: false
+      use_weight: true
       graph_weight: 0.5
       gnn_parameters:
         architecture_type: gcn
         input_dim: *input_dim
-        hidden_dim: 200
-        output_dim: 200
+        hidden_dim: 256
+        output_dim: 256
         num_layers: 3
-        dropout: 0.4
+        dropout: 0.5
   loss:
       loss_type: cross_entropy
       parameters:
@@ -94,6 +95,6 @@ compilation_parameters:
   full_graph: false
 
 trainer_config:
-  max_epochs: 500
+  max_epochs: 1000
   log_every_n_steps: 1
 
