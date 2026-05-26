@@ -35,7 +35,7 @@ data_parameters:
     on_device: true
 
 model_parameters:
-  task_type: link_prediction
+  task_type: gae
 
 
   embedder_parameters:

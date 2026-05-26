@@ -36,9 +36,15 @@ cluster-info:
 		printf "%-12s free_gpus=%d\n" "$$p" "$$sum"; \
 	done'
 
+jobs-per-user-info:
+	@bash -lc 'set -euo pipefail; \
+	squeue -h -o "%u %T" | \
+	awk '\''{count[$$1,$$2]++} END {for (k in count) {split(k,a,SUBSEP); users[a[1]]=1} for (u in users) {r=count[u,"RUNNING"]+0; p=count[u,"PENDING"]+0; printf "%-24s running=%-6d pending=%-6d total=%d\n", u, r, p, r+p}}'\'' | \
+	sort -t= -k4,4nr'
+
 get-cluster:
 	@test -n "$(CLUSTER)" || (echo "Usage: make get_cluster CLUSTER=cluster_name"; exit 1)
-	sinteractive -p $(CLUSTER) -c 32 --mem 150G --time 10:00:00
+	sinteractive -p $(CLUSTER) -c 8 --mem 32G --time 10:00:00
 
 get-auto-cluster:
 	@bash -lc 'set -euo pipefail; \

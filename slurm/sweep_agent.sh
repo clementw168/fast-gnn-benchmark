@@ -4,7 +4,7 @@
 #SBATCH --error=slurm_logs/%x_%j.err
 #SBATCH --partition=L40S,A100,audible,A40 # A100,L40S,A40,audible
 #SBATCH --gres=gpu:1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --time=24:00:00
 

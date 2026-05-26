@@ -33,10 +33,10 @@ data_parameters:
     on_device: true
 
 model_parameters:
-  task_type: link_prediction
+  task_type: gae
   architecture_parameters:
       architecture_type: gcn
-      input_dim: *input_dim
+      input_dim: *data_dim
       hidden_dim: 128
       output_dim: 128
       num_layers: 5

@@ -24,6 +24,7 @@ from typing import Any
 import numpy as np
 import torch
 from torch_geometric.data import Data, Dataset
+from torch_geometric.loader import DataLoader
 
 from fast_gnn_benchmark.data.link_dataloader import (
     cannonize_positive_edges,
@@ -197,18 +198,62 @@ class SEALDatasetCpp(Dataset):
         )
 
 
+class SealLoader:
+    """Builds a SEALDatasetCpp from an OGB-style dataset and wraps it with PyG's DataLoader.
+
+    Each batch is a PyG Batch of subgraphs with:
+        - x         : node features [total_nodes, feat_dim] (or None)
+        - edge_index: local edge indices [2, total_edges]
+        - z         : DRNL labels [total_nodes], int64
+        - node_id   : original global node ids [total_nodes]
+        - y         : edge labels [batch_size], float (1=positive, 0=negative)
+        - batch     : graph membership [total_nodes]
+        - ptr       : subgraph boundaries [batch_size + 1]
+    """
+
+    def __init__(
+        self,
+        dataset: Any,
+        split_type: SplitType = SplitType.TRAIN,
+        num_neighbors: list[int] = [20, 10],
+        batch_size: int = 32,
+        max_rejection_sampling_iterations: int = 3,
+        num_workers: int = 0,
+        persistent_workers: bool = False,
+    ):
+        seal_dataset = SEALDatasetCpp(
+            dataset,
+            split_type=split_type,
+            num_neighbors=num_neighbors,
+            max_rejection_sampling_iterations=max_rejection_sampling_iterations,
+        )
+
+        self._loader = DataLoader(
+            seal_dataset,
+            batch_size=batch_size,
+            shuffle=(split_type == SplitType.TRAIN),
+            num_workers=num_workers,
+            persistent_workers=persistent_workers and num_workers > 0,
+        )
+
+    def __iter__(self):
+        return iter(self._loader)
+
+    def __len__(self) -> int:
+        return len(self._loader)
+
+
 if __name__ == "__main__":
-    from torch_geometric.loader import DataLoader
     from tqdm import tqdm
 
     from fast_gnn_benchmark.data.dataset.ogbl import FixLinkPropPredDataset
 
     dataset = FixLinkPropPredDataset(name="ogbl-ppa", root="./datasets/ogbl/")
-    seal_train = SEALDatasetCpp(dataset, split_type=SplitType.TRAIN, num_neighbors=[20, 10])
-    loader = DataLoader(
-        seal_train,
+    loader = SealLoader(
+        dataset,
+        split_type=SplitType.TRAIN,
+        num_neighbors=[20, 10],
         batch_size=2048,
-        shuffle=True,
         num_workers=32,
         persistent_workers=True,
     )
@@ -225,6 +270,7 @@ if __name__ == "__main__":
 
         print()
         print("batch.x: ", batch.x)
+        print("x non zero: ", (batch.x != 0).sum())
         print("batch.edge_index: ", batch.edge_index)
         print("batch.z: ", batch.z)
         print("batch.node_id: ", batch.node_id)

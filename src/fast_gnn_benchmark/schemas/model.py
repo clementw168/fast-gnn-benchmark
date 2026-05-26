@@ -332,14 +332,25 @@ class LinkPredictorParameters(BaseModel):
     parameters: dict[str, Any]
 
 
-class LinkPredictionModelParameters(BaseModelParameters):
-    task_type: Literal["link_prediction"] = "link_prediction"
+class LinkPredictionModelParameters:
+    """Marker base for isinstance checks across all link-prediction variants."""
+
+
+class GAEModelParameters(BaseModelParameters, LinkPredictionModelParameters):
+    task_type: Literal["gae"] = "gae"
     link_predictor_parameters: LinkPredictorParameters
     embedder_parameters: EmbedderParameters = Field(
         default_factory=lambda: EmbedderParameters(
             use_embedding=False, embedding_dim=0, embedding_only=False, initializer="orthogonal", num_nodes=0
         )
     )
+
+
+class SEALModelParameters(BaseModelParameters, LinkPredictionModelParameters):
+    task_type: Literal["seal"] = "seal"
+    max_z: int
+    pooling_type: Literal["sum", "mean"] = "sum"
+    num_classifier_layers: int = 3
 
 
 # -------------------- Trainer parameters --------------------
@@ -396,7 +407,7 @@ class TrainerParameters(BaseModel):
     seed: int | None = None
     data_parameters: DataParameters
     model_parameters: Annotated[
-        NodeClassificationModelParameters | LinkPredictionModelParameters,
+        NodeClassificationModelParameters | GAEModelParameters | SEALModelParameters,
         Field(discriminator="task_type"),
     ]
     callbacks: list[CallbackParameters]

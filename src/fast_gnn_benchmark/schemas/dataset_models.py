@@ -64,6 +64,7 @@ class DataLoaderType(Enum):
     PPR_NODE_LOADER = "ppr_node_loader"
     DROP_EDGE_LOADER = "drop_edge_loader"
     LINK_LOADER = "link_loader"
+    SEAL_LOADER = "seal_loader"
 
 
 class DataLoaderParameters(BaseModel):
@@ -157,6 +158,15 @@ class LinkLoaderParameters(DataLoaderParameters):
     on_device: bool = True
 
 
+class SealLoaderParameters(DataLoaderParameters):
+    data_loader_type: Literal[DataLoaderType.SEAL_LOADER] = DataLoaderType.SEAL_LOADER
+    batch_size: int
+    num_neighbors: list[int] = Field(default_factory=lambda: [20, 10])
+    max_rejection_sampling_iterations: int = 3
+    num_workers: int = 0
+    persistent_workers: bool = False
+
+
 class DropEdgeLoaderParameters(DataLoaderParameters):
     data_loader_type: Literal[DataLoaderType.DROP_EDGE_LOADER] = DataLoaderType.DROP_EDGE_LOADER
     drop_edge_ratio: float
@@ -175,6 +185,7 @@ DataLoaderParametersChoices = Annotated[
     | PPRNodeLoaderParameters
     | RandomNodeLoaderWithReplacementParameters
     | DropEdgeLoaderParameters
-    | LinkLoaderParameters,
+    | LinkLoaderParameters
+    | SealLoaderParameters,
     Field(discriminator="data_loader_type"),
 ]
