@@ -63,13 +63,23 @@ class SealModel(BaseGNN[SEALModelParameters]):
     def validation_step(self, batch: Batch, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
         loss = self.loss(pred, batch.y)
-        batch_metrics = self.val_metrics(pred, batch.y)
-        self.log_dict({"val/loss": loss, **batch_metrics}, on_epoch=True, batch_size=batch.y.shape[0], prog_bar=False)
+        self.val_metrics(pred, batch.y)  # accumulate only — logged via on_validation_epoch_end
+        self.log("val/loss", loss, on_epoch=True, batch_size=batch.y.shape[0], prog_bar=False)
         return loss
+
+    def on_validation_epoch_end(self) -> None:
+        # Use compute() on the accumulated scores so hit@k is the *global*
+        # metric over all accumulated pos/neg, not an average of per-batch values.
+        metrics = self.val_metrics.compute()
+        self.log_dict(metrics, prog_bar=False)
 
     def test_step(self, batch: Batch, batch_idx: int) -> torch.Tensor:  # noqa: ARG002
         pred = self.model(batch)
         loss = self.loss(pred, batch.y)
-        batch_metrics = self.test_metrics(pred, batch.y)
-        self.log_dict({"test/loss": loss, **batch_metrics}, on_epoch=True, batch_size=batch.y.shape[0], prog_bar=False)
+        self.test_metrics(pred, batch.y)  # accumulate only — logged via on_test_epoch_end
+        self.log("test/loss", loss, on_epoch=True, batch_size=batch.y.shape[0], prog_bar=False)
         return loss
+
+    def on_test_epoch_end(self) -> None:
+        metrics = self.test_metrics.compute()
+        self.log_dict(metrics, prog_bar=False)

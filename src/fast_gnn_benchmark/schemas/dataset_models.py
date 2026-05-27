@@ -65,6 +65,7 @@ class DataLoaderType(Enum):
     DROP_EDGE_LOADER = "drop_edge_loader"
     LINK_LOADER = "link_loader"
     SEAL_LOADER = "seal_loader"
+    OFFLINE_SEAL_LOADER = "offline_seal_loader"
 
 
 class DataLoaderParameters(BaseModel):
@@ -174,6 +175,19 @@ class DropEdgeLoaderParameters(DataLoaderParameters):
     pin_memory: bool = False
 
 
+class OfflineSealLoaderParameters(DataLoaderParameters):
+    data_loader_type: Literal[DataLoaderType.OFFLINE_SEAL_LOADER] = DataLoaderType.OFFLINE_SEAL_LOADER
+    root: str
+    batch_size: int
+    num_neighbors: list[int] = Field(default_factory=lambda: [20, 10])
+    max_rejection_sampling_iterations: int = 3
+    chunk_size: int = 1000
+    precompute_workers: int = 0
+    num_workers: int = 0
+    persistent_workers: bool = False
+    force_reprocess: bool = False
+
+
 DataLoaderParametersChoices = Annotated[
     BaseDataLoaderParameters
     | RandomNodeLoaderParameters
@@ -186,6 +200,7 @@ DataLoaderParametersChoices = Annotated[
     | RandomNodeLoaderWithReplacementParameters
     | DropEdgeLoaderParameters
     | LinkLoaderParameters
-    | SealLoaderParameters,
+    | SealLoaderParameters
+    | OfflineSealLoaderParameters,
     Field(discriminator="data_loader_type"),
 ]
