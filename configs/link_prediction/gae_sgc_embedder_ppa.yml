@@ -35,7 +35,7 @@ data_parameters:
     on_device: true
 
 model_parameters:
-  task_type: link_prediction
+  task_type: gae
 
 
   embedder_parameters:
@@ -48,10 +48,10 @@ model_parameters:
   architecture_parameters:
       architecture_type: sgc2
       input_dim: *input_dim
-      hidden_dim: 128
+      hidden_dim: 512
       output_dim: 128
       num_layers: 2
-      dropout: 0.8
+      dropout: 0.2
       use_input_projection: false
       use_output_projection: false
       use_residual: false
@@ -60,7 +60,7 @@ model_parameters:
   link_predictor_parameters:
     link_predictor_type: hadamard_mlp
     parameters:
-      dropout: 0.6
+      dropout: 0.2
       num_layers: 5
       use_residual: false
       use_layer_norm: true
@@ -85,7 +85,7 @@ model_parameters:
   optimizer:
     optimizer_type: adam
     parameters:
-      lr: 0.001
+      lr: 0.0005
       weight_decay: 0
 
 callbacks: 

@@ -330,7 +330,9 @@ class BinaryAccuracy(OptimizedMetric):
 
     def update(self, pred: torch.Tensor, target: torch.Tensor) -> torch.Tensor:  # pyright: ignore[reportIncompatibleMethodOverride]
         with torch.no_grad():
-            correct_predictions = (pred > 0.5) == target  # noqa: PLR2004
+            # pred is a raw logit (model uses bce_with_logits_loss), so the
+            # decision boundary is 0, not 0.5.
+            correct_predictions = (pred > 0) == target
             self.correct_predictions += correct_predictions.sum()
             self.total_samples += pred.shape[0]
 

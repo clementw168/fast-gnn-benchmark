@@ -9,12 +9,14 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities.compile import _maybe_unwrap_optimized
 
-from fast_gnn_benchmark.models.link_prediction import LinkPredictionModel
+from fast_gnn_benchmark.models.gae_model import GAEModel
 from fast_gnn_benchmark.models.node_classification import NodeClassificationModel
+from fast_gnn_benchmark.models.seal_model import SealModel
 from fast_gnn_benchmark.schemas.data_models import DataLoaderTypeChoices
 from fast_gnn_benchmark.schemas.model import (
-    LinkPredictionModelParameters,
+    GAEModelParameters,
     NodeClassificationModelParameters,
+    SEALModelParameters,
     TrainerParameters,
 )
 
@@ -82,10 +84,10 @@ def get_trainer_parameters_from_config(
 
 
 def _configure_and_compile_model(
-    model: NodeClassificationModel | LinkPredictionModel,
+    model: NodeClassificationModel | GAEModel | SealModel,
     use_compiled_torch: bool,
     full_graph: bool,
-) -> NodeClassificationModel | LinkPredictionModel:
+) -> NodeClassificationModel | GAEModel | SealModel:
     """Configure PyTorch Dynamo and compile the model if CUDA is available."""
     if use_compiled_torch:
         if torch.cuda.is_available():
@@ -98,14 +100,17 @@ def _configure_and_compile_model(
     return model  # type: ignore
 
 
-def get_model(trainer_parameters: TrainerParameters) -> NodeClassificationModel | LinkPredictionModel:
+def get_model(trainer_parameters: TrainerParameters) -> NodeClassificationModel | GAEModel | SealModel:
     match trainer_parameters.model_parameters.task_type:
         case "node_classification":
             assert isinstance(trainer_parameters.model_parameters, NodeClassificationModelParameters)
             model = NodeClassificationModel(trainer_parameters.model_parameters)
-        case "link_prediction":
-            assert isinstance(trainer_parameters.model_parameters, LinkPredictionModelParameters)
-            model = LinkPredictionModel(trainer_parameters.model_parameters)
+        case "gae":
+            assert isinstance(trainer_parameters.model_parameters, GAEModelParameters)
+            model = GAEModel(trainer_parameters.model_parameters)
+        case "seal":
+            assert isinstance(trainer_parameters.model_parameters, SEALModelParameters)
+            model = SealModel(trainer_parameters.model_parameters)
 
         case _:
             raise ValueError(f"Invalid task type: {trainer_parameters.model_parameters.task_type}")
@@ -117,14 +122,16 @@ def get_model(trainer_parameters: TrainerParameters) -> NodeClassificationModel 
     )
 
 
-def load_model_from_checkpoint(checkpoint_path: str) -> NodeClassificationModel | LinkPredictionModel:
+def load_model_from_checkpoint(checkpoint_path: str) -> NodeClassificationModel | GAEModel | SealModel:
     checkpoint = torch.load(checkpoint_path, weights_only=False)
     model_parameters = checkpoint["hyper_parameters"]["model_parameters"]
     match model_parameters.task_type:
         case "node_classification":
             return NodeClassificationModel.load_from_checkpoint(checkpoint_path, weights_only=False)
-        case "link_prediction":
-            return LinkPredictionModel.load_from_checkpoint(checkpoint_path, weights_only=False)
+        case "gae":
+            return GAEModel.load_from_checkpoint(checkpoint_path, weights_only=False)
+        case "seal":
+            return SealModel.load_from_checkpoint(checkpoint_path, weights_only=False)
 
         case _:
             raise ValueError(f"Invalid task type: {model_parameters.task_type}")
@@ -132,9 +139,9 @@ def load_model_from_checkpoint(checkpoint_path: str) -> NodeClassificationModel 
 
 def get_model_to_test(
     callbacks: list[L.Callback],
-    last_model: NodeClassificationModel | LinkPredictionModel,
+    last_model: NodeClassificationModel | GAEModel | SealModel,
     trainer_parameters: TrainerParameters,
-) -> NodeClassificationModel | LinkPredictionModel:
+) -> NodeClassificationModel | GAEModel | SealModel:
     for callback in callbacks:
         if isinstance(callback, ModelCheckpoint):
             best_model_path = callback.best_model_path
@@ -199,7 +206,7 @@ def get_callbacks(trainer_parameters: TrainerParameters) -> list[L.Callback]:
 
 
 def check_test_batch(
-    model: NodeClassificationModel | LinkPredictionModel,
+    model: NodeClassificationModel | GAEModel | SealModel,
     test_loader: DataLoaderTypeChoices,
     device: str,
 ) -> None:
@@ -227,7 +234,13 @@ def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
 
     callbacks = get_callbacks(trainer_parameters)
 
-    check_test_batch(model, test_loader, device)
+    eval_device = "cpu" if trainer_parameters.eval_on_cpu else device
+
+    if trainer_parameters.eval_on_cpu and hasattr(test_loader, "device"):
+        test_loader.device = torch.device("cpu")  # type: ignore
+        print("Evaluation will run on CPU")
+
+    check_test_batch(model, test_loader, eval_device)
 
     trainer = L.Trainer(
         **trainer_parameters.trainer_config,
@@ -239,7 +252,12 @@ def do_run(trainer_parameters: TrainerParameters) -> list[dict[str, float]]:
     trainer.fit(model=model, train_dataloaders=train_loader, val_dataloaders=val_loader)
 
     model = get_model_to_test(callbacks, model, trainer_parameters)
-    test_metrics = trainer.test(model=model, dataloaders=test_loader)
+
+    if trainer_parameters.eval_on_cpu:
+        eval_trainer = L.Trainer(accelerator="cpu", logger=wandb_logger)
+        test_metrics = eval_trainer.test(model=model, dataloaders=test_loader)
+    else:
+        test_metrics = trainer.test(model=model, dataloaders=test_loader)
 
     if wandb_logger is not None:
         wandb_logger.experiment.finish()

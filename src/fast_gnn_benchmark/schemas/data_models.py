@@ -9,6 +9,7 @@ from fast_gnn_benchmark.data.dataset.ogbn_on_disk import OGBNDatasetOnDisk, OGBN
 from fast_gnn_benchmark.data.dataset.pokec import PokecDataset
 from fast_gnn_benchmark.data.dataset.split_strategies import random_split_dataset, resplit_planetoid_dataset
 from fast_gnn_benchmark.data.link_dataloader import LinkLoader
+from fast_gnn_benchmark.data.seal_dataset import OfflineSealLoader, SealLoader
 from fast_gnn_benchmark.data.node_dataloaders import (
     BaseDataLoader,
     ClusterLoaderWrapper,
@@ -60,6 +61,8 @@ DataLoaderTypeChoices = (
     | RandomNodeLoaderWithReplacement
     | DropEdgeLoader
     | LinkLoader
+    | SealLoader
+    | OfflineSealLoader
 )
 
 
@@ -346,6 +349,32 @@ class DataParameters(BaseModel):
                     negative_sampling_ratio=data_loader_parameters.negative_sampling_ratio,
                     on_device=data_loader_parameters.on_device,
                     split_type=split_type,
+                )
+
+            case DataLoaderType.SEAL_LOADER:
+                return SealLoader(
+                    dataset,
+                    split_type=split_type,
+                    num_neighbors=data_loader_parameters.num_neighbors,
+                    batch_size=data_loader_parameters.batch_size,
+                    max_rejection_sampling_iterations=data_loader_parameters.max_rejection_sampling_iterations,
+                    num_workers=data_loader_parameters.num_workers,
+                    persistent_workers=data_loader_parameters.persistent_workers,
+                )
+
+            case DataLoaderType.OFFLINE_SEAL_LOADER:
+                return OfflineSealLoader(
+                    dataset,
+                    root=data_loader_parameters.root,
+                    split_type=split_type,
+                    num_neighbors=data_loader_parameters.num_neighbors,
+                    batch_size=data_loader_parameters.batch_size,
+                    max_rejection_sampling_iterations=data_loader_parameters.max_rejection_sampling_iterations,
+                    chunk_size=data_loader_parameters.chunk_size,
+                    precompute_workers=data_loader_parameters.precompute_workers,
+                    num_workers=data_loader_parameters.num_workers,
+                    persistent_workers=data_loader_parameters.persistent_workers,
+                    force_reprocess=data_loader_parameters.force_reprocess,
                 )
 
             case _:

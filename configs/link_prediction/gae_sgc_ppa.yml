@@ -32,7 +32,7 @@ data_parameters:
     on_device: true
 
 model_parameters:
-  task_type: link_prediction
+  task_type: gae
   architecture_parameters:
       architecture_type: sgc
       input_dim: *input_dim

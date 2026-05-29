@@ -8,13 +8,13 @@ from fast_gnn_benchmark.models.link_prediction_heads import CosineSimilarityClas
 from fast_gnn_benchmark.schemas.model import (
     ArchitectureParametersChoices,
     EmbedderParameters,
-    LinkPredictionModelParameters,
+    GAEModelParameters,
     LinkPredictorParameters,
     LinkPredictorType,
 )
 
 
-class LinkPredictorBase(torch.nn.Module):
+class GAEBase(torch.nn.Module):
     def __init__(
         self,
         embedder_parameters: EmbedderParameters,
@@ -55,12 +55,12 @@ class LinkPredictorBase(torch.nn.Module):
         return self.classifier(x, x, data.target_edges)
 
 
-class LinkPredictionModel(BaseGNN[LinkPredictionModelParameters]):
-    def __init__(self, model_parameters: LinkPredictionModelParameters):
+class GAEModel(BaseGNN[GAEModelParameters]):
+    def __init__(self, model_parameters: GAEModelParameters):
         super().__init__(model_parameters)
 
     def load_model(self) -> torch.nn.Module:
-        return LinkPredictorBase(
+        return GAEBase(
             self.model_parameters.embedder_parameters,
             self.model_parameters.architecture_parameters,
             self.model_parameters.link_predictor_parameters,

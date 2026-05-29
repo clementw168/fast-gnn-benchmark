@@ -14,6 +14,12 @@ jupyter:
 	@printf 'from local, use this command to access the jupyter notebook: ssh -N -L 8888:localhost:8888 %s@%s\n' "$$(whoami)" "$$(hostname -s)"
 	uv run jupyter notebook --no-browser --port=8888
 
+spawn-on-gpu-gateway:
+	ssh -t clwang@gpu-gw 'cd ~/fast-gnn-benchmark && make cluster-info && exec bash -l'
+
+spawn-auto-cluster:
+	ssh -t clwang@gpu-gw 'cd ~/fast-gnn-benchmark && make get-auto-cluster'
+
 cluster-info:
 	@bash -lc 'set -euo pipefail; \
 	sinfo -h -o %P | sed "s/\*$$//" | sort -u | \
@@ -29,3 +35,41 @@ cluster-info:
 		done < <(sinfo -h -p "$$p" -N -o %N); \
 		printf "%-12s free_gpus=%d\n" "$$p" "$$sum"; \
 	done'
+
+jobs-per-user-info:
+	@bash -lc 'set -euo pipefail; \
+	squeue -h -o "%u %T" | \
+	awk '\''{count[$$1,$$2]++} END {for (k in count) {split(k,a,SUBSEP); users[a[1]]=1} for (u in users) {r=count[u,"RUNNING"]+0; p=count[u,"PENDING"]+0; printf "%-24s running=%-6d pending=%-6d total=%d\n", u, r, p, r+p}}'\'' | \
+	sort -t= -k4,4nr'
+
+get-cluster:
+	@test -n "$(CLUSTER)" || (echo "Usage: make get_cluster CLUSTER=cluster_name"; exit 1)
+	sinteractive -p $(CLUSTER) -c 8 --mem 32G --time 10:00:00
+
+get-auto-cluster:
+	@bash -lc 'set -euo pipefail; \
+	out="$$(make -s cluster-info)"; \
+	printf "%s\n" "$$out"; \
+	get_free() { \
+	  part="$$1"; \
+	  printf "%s\n" "$$out" | awk -v p="$$part" '\''$$1 == p { split($$2,a,"="); print a[2]+0; found=1 } END { if (!found) print 0 }'\''; \
+	}; \
+	for p in L40S audible A100 A40; do \
+	  free="$$(get_free "$$p")"; \
+	  echo "Checking $$p: free_gpus=$$free"; \
+	  if [ "$$free" -gt 0 ]; then \
+	    echo "Selecting cluster: $$p"; \
+	    $(MAKE) get-cluster CLUSTER="$$p"; \
+	    exit 0; \
+	  fi; \
+	done; \
+	echo "No available cluster found in: L40S, audible, A100, A40"; \
+	exit 1'
+
+run-sweep:
+	@test -n "$(SWEEP_ID)" || (echo "Usage: make run_sweep SWEEP_ID=sweep_id"; exit 1)
+	sbatch --export=SWEEP_ID=$(SWEEP_ID) slurm/sweep_agent.sh
+
+run-config:
+	@test -n "$(CONFIG_FILE)" || (echo "Usage: make run_config CONFIG_FILE=path/to/config.yml"; exit 1)
+	sbatch --export=CONFIG_FILE=$(CONFIG_FILE) slurm/run_config.sh

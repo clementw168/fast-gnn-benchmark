@@ -1,0 +1,104 @@
+parameters:
+  node_feature_dim: &node_feature_dim 58
+  max_z: &max_z 6              # k²+1=5 is the max DRNL value for 2-hop; update with k²+2 if changing hops
+  input_dim: &input_dim 64     # node_feature_dim + max_z
+  num_neighbors: &num_neighbors [10, 10]
+  seal_cache_root: &seal_cache_root "./datasets/seal_cache/ogbl-ppa/"
+
+
+seed: 42
+
+data_parameters:
+  dataset_type: ogbl-ppa
+  to_undirected: false
+  add_self_loops_and_remove_duplicate_edges: false
+  remove_duplicate_edges: false
+  train_data_loader_parameters:
+    data_loader_type: offline_seal_loader
+    root: *seal_cache_root
+    batch_size: 8192
+    num_neighbors: *num_neighbors
+    max_rejection_sampling_iterations: 3
+    chunk_size: 1000
+    precompute_workers: 8
+    num_workers: 4
+    persistent_workers: true
+  val_data_loader_parameters:
+    data_loader_type: offline_seal_loader
+    root: *seal_cache_root
+    batch_size: 8192
+    num_neighbors: *num_neighbors
+    max_rejection_sampling_iterations: 3
+    chunk_size: 1000
+    precompute_workers: 8
+    num_workers: 4
+    persistent_workers: true
+  test_data_loader_parameters:
+    data_loader_type: offline_seal_loader
+    root: *seal_cache_root
+    batch_size: 8192
+    num_neighbors: *num_neighbors
+    max_rejection_sampling_iterations: 3
+    chunk_size: 1000
+    precompute_workers: 8
+    num_workers: 4
+    persistent_workers: true
+
+model_parameters:
+  task_type: seal
+  max_z: *max_z
+  pooling_type: sum
+  num_classifier_layers: 3
+  architecture_parameters:
+    architecture_type: gcn
+    input_dim: *input_dim
+    hidden_dim: 128
+    output_dim: 128
+    num_layers: 3
+    dropout: 0.1
+    use_input_projection: false
+    use_output_projection: false
+    use_residual: false
+    use_layer_norm: false
+
+  loss:
+    loss_type: bce_with_logits_loss
+
+  metrics:
+    - metric_type: binary_accuracy
+      display_name: accuracy
+    - metric_type: hit_rate
+      display_name: hit_rate@20
+      parameters:
+        k: 20
+    - metric_type: hit_rate
+      display_name: hit_rate@100
+      parameters:
+        k: 100
+
+  optimizer:
+    optimizer_type: adam
+    parameters:
+      lr: 0.001
+      weight_decay: 0.00005
+
+callbacks:
+  - callback_type: model_checkpoint
+    parameters:
+      monitor: val/accuracy
+      mode: max
+      save_top_k: 1
+      filename: best
+
+wandb_logger_parameters:
+  reinit: true
+
+compilation_parameters:
+  use_compiled_torch: false
+  full_graph: false
+
+trainer_config:
+  max_epochs: 20
+  log_every_n_steps: 1
+  limit_train_batches: 250
+  limit_val_batches: 100
